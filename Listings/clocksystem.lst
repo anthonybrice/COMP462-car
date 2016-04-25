@@ -1,0 +1,1428 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ; ClockSystem.s
+    2 00000000         ; Runs on MSP432
+    3 00000000         ; Change the clock frequency using the Clock System modu
+                       le.
+    4 00000000         ; Daniel Valvano
+    5 00000000         ; June 30, 2015
+    6 00000000         
+    7 00000000         ;  This example accompanies the books
+    8 00000000         ;  "Embedded Systems: Introduction to the MSP432 Microco
+                       ntroller",
+    9 00000000         ;  ISBN: 978-1512185676, Jonathan Valvano, copyright (c)
+                        2015
+   10 00000000         ;  Program 4.6
+   11 00000000         
+   12 00000000         ;Copyright 2015 by Jonathan W. Valvano, valvano@mail.ute
+                       xas.edu
+   13 00000000         ;   You may use, edit, run or distribute this file
+   14 00000000         ;   as long as the above copyright notice remains
+   15 00000000         ;THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHET
+                       HER EXPRESS, IMPLIED
+   16 00000000         ;OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WA
+                       RRANTIES OF
+   17 00000000         ;MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE AP
+                       PLY TO THIS SOFTWARE.
+   18 00000000         ;VALVANO SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR 
+                       SPECIAL, INCIDENTAL,
+   19 00000000         ;OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
+   20 00000000         ;For more information about my classes, my research, and
+                        my books, see
+   21 00000000         ;http://users.ece.utexas.edu/~valvano/
+   22 00000000         
+   23 00000000 40010400 
+                       CSKEY   EQU              0x40010400  ; Key Register
+   24 00000000 40010404 
+                       CSCTL0  EQU              0x40010404  ; Control 0 Registe
+                                                            r
+   25 00000000 40010408 
+                       CSCTL1  EQU              0x40010408  ; Control 1 Registe
+                                                            r
+   26 00000000 4001040C 
+                       CSCTL2  EQU              0x4001040C  ; Control 2 Registe
+                                                            r
+   27 00000000 40010448 
+                       CSIFG   EQU              0x40010448  ; Interrupt Flag Re
+                                                            gister
+   28 00000000 40010450 
+                       CSCLRIFG
+                               EQU              0x40010450  ; Clear Interrupt F
+                                                            lag Register
+   29 00000000 40004D2A 
+                       PJSEL0  EQU              0x40004D2A  ; Port J Select 0
+   30 00000000 40004D2C 
+                       PJSEL1  EQU              0x40004D2C  ; Port J Select 1
+   31 00000000 40010000 
+                       PCMCTL0 EQU              0x40010000  ; Control 0 Registe
+                                                            r
+   32 00000000 40010004 
+                       PCMCTL1 EQU              0x40010004  ; Control 1 Registe
+                                                            r
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   33 00000000 4001000C 
+                       PCMIFG  EQU              0x4001000C  ; Interrupt Flag Re
+                                                            gister
+   34 00000000 40010010 
+                       PCMCLRIFG
+                               EQU              0x40010010  ; Clear Interrupt F
+                                                            lag Register
+   35 00000000 00000000 
+                       DCO1_5MHz
+                               EQU              0x00000000
+   36 00000000 00010000 
+                       DCO3MHz EQU              0x00010000
+   37 00000000 00020000 
+                       DCO6MHz EQU              0x00020000
+   38 00000000 00030000 
+                       DCO12MHz
+                               EQU              0x00030000
+   39 00000000         
+   40 00000000                 AREA             |.text|, CODE, READONLY, ALIGN=
+2
+   41 00000000                 THUMB
+   42 00000000                 EXPORT           Clock_Init
+   43 00000000                 EXPORT           Clock_Init48MHz
+   44 00000000                 EXPORT           Clock_Init32kHz
+   45 00000000                 EXPORT           Clock_InitLowPower
+   46 00000000         ;------------Clock_Init------------
+   47 00000000         ; Configure for SMCLK = MCLK = (R0 parameter), ACLK = RE
+                       FOCLK.
+   48 00000000         ; Input: encode R0 as follows for:
+   49 00000000         ;        1.5 MHz: R0 = 0x00000000
+   50 00000000         ;          3 MHz: R0 = 0x00010000
+   51 00000000         ;          6 MHz: R0 = 0x00020000
+   52 00000000         ;         12 MHz: R0 = 0x00030000
+   53 00000000         ; Output: none
+   54 00000000         ; Modifies: R0, R1, R2
+   55 00000000         Clock_Init
+   56 00000000         ; check input parameter R0
+   57 00000000 2800            CMP              R0, #DCO1_5MHz 
+                                                            ; R0 == DCO1_5MHz?
+   58 00000002 D009            BEQ              clockInitContinue 
+                                                            ; if so, continue
+   59 00000004 F5B0 3F80       CMP              R0, #DCO3MHz ; R0 == DCO3MHz?
+   60 00000008 D006            BEQ              clockInitContinue 
+                                                            ; if so, continue
+   61 0000000A F5B0 3F00       CMP              R0, #DCO6MHz ; R0 == DCO6MHz?
+   62 0000000E D003            BEQ              clockInitContinue 
+                                                            ; if so, continue
+   63 00000010 F5B0 3F40       CMP              R0, #DCO12MHz ; R0 == DCO12MHz?
+                                                            
+   64 00000014 D000            BEQ              clockInitContinue 
+                                                            ; if so, continue
+   65 00000016         clockInitBadInput
+   66 00000016 4770            BX               LR          ; return
+   67 00000018         clockInitContinue
+   68 00000018         ; unlock CS module for register access
+   69 00000018 49A4            LDR              R1, =CSKEY
+   70 0000001A F646 125A       LDR              R2, =0x695A
+   71 0000001E 600A            STR              R2, [R1]    ; CSKEY = 0x0000695
+                                                            A
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+   72 00000020         ; reset tuning parameters
+   73 00000020 49A3            LDR              R1, =CSCTL0
+   74 00000022 F04F 0200       MOV              R2, #0
+   75 00000026         ; configure for nominal DCO frequency = 3 MHz (default)
+   76 00000026 F442 3280       ORR              R2, R2, #0x00010000 ; CSCTL0 = 
+                                                            0x00010000
+   77 0000002A 600A            STR              R2, [R1]    ; DCORSEL = 1
+   78 0000002C         ; enable DCO external resistor mode (must be done with D
+                       CORSEL == 1)
+   79 0000002C F442 0280       ORR              R2, R2, #0x00400000 ; CSCTL0 |=
+                                                             0x00400000 (DCORES
+                                                             = 1)
+   80 00000030 600A            STR              R2, [R1]    ; DCORES = 1
+   81 00000032         ; configure for nominal DCO frequency = 1.5,3,6,12,24 or
+                        48 MHz
+   82 00000032 F422 22E0       BIC              R2, R2, #0x00070000 ; R2 = R2&~
+                                                            0x00070000 (clear D
+                                                            CORSEL bit field)
+   83 00000036 EA42 0200       ORR              R2, R2, R0  ; bits 18,17,16
+   84 0000003A 600A            STR              R2, [R1]
+   85 0000003C         ; set subsystem clock sources and dividers
+   86 0000003C 499D            LDR              R1, =CSCTL1
+   87 0000003E         ; configure for all clock dividers equal to 1
+   88 0000003E         ; configure for ACLK sourced from REFOCLK
+   89 0000003E         ; configure for SMCLK and HSMCLK sourced from DCO
+   90 0000003E         ; configure for MCLK sourced from DCO
+   91 0000003E F240 2233       LDR              R2, =0x00000233
+   92 00000042 600A            STR              R2, [R1]    ; CSCTL1 = 0x000002
+                                                            33
+   93 00000044         ; lock CS module from unintended access
+   94 00000044 4999            LDR              R1, =CSKEY
+   95 00000046 F04F 0200       MOV              R2, #0
+   96 0000004A 600A            STR              R2, [R1]    ; CSKEY = 0
+   97 0000004C 4770            BX               LR
+   98 0000004E         
+   99 0000004E         ;------------Clock_Init48MHz------------
+  100 0000004E         ; Configure for MCLK = HFXTCLK, HSMCLK = HFXTCLK/2,
+  101 0000004E         ; SMCLK = HFXTCLK/4, ACLK = REFOCLK.
+  102 0000004E         ; On the LaunchPad, the high-frequency crystal
+  103 0000004E         ; oscillator has a 48 MHz crystal attached, which will
+  104 0000004E         ; make the bus (master) clock run at 48 MHz.  The sub-
+  105 0000004E         ; system master clock (HSMCLK) runs at its maximum of
+  106 0000004E         ; 24 MHz.  The low-speed subsystem master clock (SMCLK)
+  107 0000004E         ; runs at its maximum of 12 MHz.  In other words, this
+  108 0000004E         ; function is similar to Clock_Init(), except instead
+  109 0000004E         ; of the variable frequency DCO this uses the fixed
+  110 0000004E         ; high-frequency crystal.
+  111 0000004E         ; Input: none
+  112 0000004E         ; Output: none
+  113 0000004E         ; Modifies: R0, R1, R2, R3
+  114 0000004E         Clock_Init48MHz
+  115 0000004E         ; wait for the PCMCTL0 and Clock System to be write-able
+                        by waiting for Power Control Manager to be idle
+  116 0000004E F04F 0200       MOV              R2, #0      ; R2 is Prewait cou
+                                                            nter
+  117 00000052 4B99            LDR              R3, =100000 ; R3 is Prewait cou
+                                                            nter timeout value
+  118 00000054 4999            LDR              R1, =PCMCTL1
+  119 00000056         clockInit48PrewaitLoop
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+  120 00000056 6808            LDR              R0, [R1]
+  121 00000058 F410 7080       ANDS             R0, R0, #0x00000100 ; look at P
+                                                            MR_BUSY bit of PCMC
+                                                            TL1
+  122 0000005C D004            BEQ              clockInit48cont0 ; if cleared, 
+                                                            continue
+  123 0000005E F102 0201       ADD              R2, R2, #1  ; increment Prewait
+                                                             counter
+  124 00000062 429A            CMP              R2, R3      ; is Prewait (R2) <
+                                                             timeout (R3)?
+  125 00000064 D3F7            BLO              clockInit48PrewaitLoop ; if so,
+                                                             continue looping
+  126 00000066         clockInit48PrewaitTimeout
+  127 00000066 4770            BX               LR
+  128 00000068         clockInit48cont0
+  129 00000068         ; request power active mode LDO VCORE1 to support the 48
+                        MHz frequency
+  130 00000068 4995            LDR              R1, =PCMCTL0
+  131 0000006A 6808            LDR              R0, [R1]
+  132 0000006C 4A95            LDR              R2, =0xFFFF000F ; PCMKEY bit fi
+                                                            eld and AMR bit fie
+                                                            ld
+  133 0000006E EA20 0002       BIC              R0, R0, R2  ; clear PCMKEY bit 
+                                                            field and AMR bit f
+                                                            ield
+  134 00000072 4A95            LDR              R2, =0x695A0000 ; PCM key value
+                                                            
+  135 00000074 EA40 0002       ORR              R0, R0, R2  ; write the proper 
+                                                            PCM key to unlock w
+                                                            rite access
+  136 00000078 F040 0001       ORR              R0, R0, #0x00000001 ; request p
+                                                            ower active mode LD
+                                                            O VCORE1
+  137 0000007C 6008            STR              R0, [R1]
+  138 0000007E         ; check if the transition is invalid (see Figure 7-3 on 
+                       p344 of datasheet)
+  139 0000007E 4993            LDR              R1, =PCMIFG
+  140 00000080 6808            LDR              R0, [R1]
+  141 00000082 F010 0004       ANDS             R0, R0, #0x00000004 ; look at A
+                                                            M_INVALID_TR_IFG bi
+                                                            t of PCMIFG
+  142 00000086 D004            BEQ              clockInit48cont1 ; if cleared, 
+                                                            continue
+  143 00000088         ; bit 2 set on active mode transition invalid; bits 1-0 
+                       are for LPM-related errors; bit 6 is for DC-DC-related e
+                       rror
+  144 00000088         ; clear the transition invalid flag
+  145 00000088 4991            LDR              R1, =PCMCLRIFG
+  146 0000008A F04F 0004       MOV              R0, #0x00000004 
+                                                            ; write 1 to clear
+  147 0000008E 6008            STR              R0, [R1]
+  148 00000090         ; to do: look at CPM bit field in PCMCTL0, figure out wh
+                       at mode you're in, and step through the chart to transit
+                       ion to the mode you want
+  149 00000090         ; or be lazy and do nothing; this should work out of res
+                       et at least, but it WILL NOT work if Clock_Int32kHz() ha
+                       s been called
+  150 00000090 4770            BX               LR
+  151 00000092         clockInit48cont1
+
+
+
+ARM Macro Assembler    Page 5 
+
+
+  152 00000092         ; wait for the CPM (Current Power Mode) bit field to ref
+                       lect a change to active mode LDO VCORE1
+  153 00000092 F04F 0200       MOV              R2, #0      ; R2 is CPMwait cou
+                                                            nter
+  154 00000096 4B8F            LDR              R3, =500000 ; R3 is CPMwait cou
+                                                            nter timeout value
+  155 00000098 4989            LDR              R1, =PCMCTL0
+  156 0000009A         clockInit48CPMwaitLoop
+  157 0000009A 6808            LDR              R0, [R1]
+  158 0000009C F400 507C       AND              R0, R0, #0x00003F00 ; look at C
+                                                            PM bit field of PCM
+                                                            CTL0
+  159 000000A0 F5B0 7F80       CMP              R0, #0x00000100 ; is CPM bit fi
+                                                            eld (R0) == 0x00000
+                                                            100?
+  160 000000A4 D004            BEQ              clockInit48cont2 
+                                                            ; if so, continue
+  161 000000A6 F102 0201       ADD              R2, R2, #1  ; increment CPMwait
+                                                             counter
+  162 000000AA 429A            CMP              R2, R3      ; is CPMwait (R2) <
+                                                             timeout (R3)?
+  163 000000AC D3F5            BLO              clockInit48CPMwaitLoop ; if so,
+                                                             continue looping
+  164 000000AE         clockInit48CPMwaitTimeout
+  165 000000AE 4770            BX               LR
+  166 000000B0         clockInit48cont2
+  167 000000B0         ; wait for the PCMCTL0 and Clock System to be write-able
+                        by waiting for Power Control Manager to be idle
+  168 000000B0 F04F 0200       MOV              R2, #0      ; R2 is Postwait co
+                                                            unter
+  169 000000B4 4B80            LDR              R3, =100000 ; R3 is Postwait co
+                                                            unter timeout value
+                                                            
+  170 000000B6 4981            LDR              R1, =PCMCTL1
+  171 000000B8         clockInit48PostwaitLoop
+  172 000000B8 6808            LDR              R0, [R1]
+  173 000000BA F410 7080       ANDS             R0, R0, #0x00000100 ; look at P
+                                                            MR_BUSY bit of PCMC
+                                                            TL1
+  174 000000BE D004            BEQ              clockInit48cont3 ; if cleared, 
+                                                            continue
+  175 000000C0 F102 0201       ADD              R2, R2, #1  ; increment Postwai
+                                                            t counter
+  176 000000C4 429A            CMP              R2, R3      ; is Postwait (R2) 
+                                                            < timeout (R3)?
+  177 000000C6 D3F7            BLO              clockInit48PostwaitLoop ; if so
+                                                            , continue looping
+  178 000000C8         clockInit48PostwaitTimeout
+  179 000000C8 4770            BX               LR
+  180 000000CA         clockInit48cont3
+  181 000000CA         ; initialize PJ.3 and PJ.2 and make them HFXT (PJ.3 buil
+                       t-in 48 MHz crystal out; PJ.2 built-in 48 MHz crystal in
+                       )
+  182 000000CA         ; configure built-in 48 MHz crystal pins as HFXT
+  183 000000CA 4983            LDR              R1, =PJSEL0
+  184 000000CC 8808            LDRH             R0, [R1]
+  185 000000CE F040 000C       ORR              R0, R0, #0x000C ; configure bui
+                                                            lt-in 48 MHz crysta
+                                                            l for HFXT operatio
+
+
+
+ARM Macro Assembler    Page 6 
+
+
+                                                            n
+  186 000000D2 8008            STRH             R0, [R1]
+  187 000000D4 4981            LDR              R1, =PJSEL1
+  188 000000D6 8808            LDRH             R0, [R1]
+  189 000000D8 F020 000C       BIC              R0, R0, #0x000C ; configure bui
+                                                            lt-in 48 MHz crysta
+                                                            l for HFXT operatio
+                                                            n
+  190 000000DC 8008            STRH             R0, [R1]
+  191 000000DE         ; unlock CS module for register access
+  192 000000DE 4973            LDR              R1, =CSKEY
+  193 000000E0 F646 105A       LDR              R0, =0x695A
+  194 000000E4 6008            STR              R0, [R1]    ; CSKEY = 0x0000695
+                                                            A
+  195 000000E6         ; configure crystal settings
+  196 000000E6 497E            LDR              R1, =CSCTL2
+  197 000000E8 6808            LDR              R0, [R1]
+  198 000000EA F040 7080       ORR              R0, R0, #0x01000000 
+                                                            ; enable HFXT
+  199 000000EE F420 00E0       BIC              R0, R0, #0x00700000 ; clear HFX
+                                                            TFREQ bit field
+  200 000000F2 F440 00C0       ORR              R0, R0, #0x00600000 ; configure
+                                                             for 48 MHz externa
+                                                            l crystal
+  201 000000F6 F440 3080       ORR              R0, R0, #0x00010000 ; HFXT osci
+                                                            llator drive select
+                                                            ion for crystals >4
+                                                             MHz
+  202 000000FA 6008            STR              R0, [R1]
+  203 000000FC F020 7000       BIC              R0, R0, #0x02000000 ; disable h
+                                                            igh-frequency cryst
+                                                            al bypass
+  204 00000100 6008            STR              R0, [R1]
+  205 00000102         ; wait for the HFXT clock to stabilize
+  206 00000102 F04F 0200       MOV              R2, #0      ; R2 is Crystalstab
+                                                            le counter
+  207 00000106 4B6C            LDR              R3, =100000 ; R3 is Crystalstab
+                                                            le counter timeout 
+                                                            value
+  208 00000108         clockInit48CrystalLoop
+  209 00000108 4976            LDR              R1, =CSIFG
+  210 0000010A 6808            LDR              R0, [R1]
+  211 0000010C F010 0002       ANDS             R0, R0, #0x00000002 ; look at H
+                                                            FXTIFG bit of CSIFG
+                                                            
+  212 00000110 D008            BEQ              clockInit48cont4 ; if cleared, 
+                                                            continue
+  213 00000112 4975            LDR              R1, =CSCLRIFG
+  214 00000114 F04F 0002       MOV              R0, #0x00000002 
+                                                            ; write 1 to clear
+  215 00000118 6008            STR              R0, [R1]    ; clear the HFXT os
+                                                            cillator interrupt 
+                                                            flag
+  216 0000011A F102 0201       ADD              R2, R2, #1  ; increment Crystal
+                                                            stable counter
+  217 0000011E 429A            CMP              R2, R3      ; is Crystalstable 
+                                                            (R2) < timeout (R3)
+                                                            ?
+  218 00000120 D3F2            BLO              clockInit48CrystalLoop ; if so,
+
+
+
+ARM Macro Assembler    Page 7 
+
+
+                                                             continue looping
+  219 00000122         clockInit48CrystalTimeout
+  220 00000122 4770            BX               LR
+  221 00000124         clockInit48cont4
+  222 00000124         ; set subsystem clock sources and dividers
+  223 00000124 4963            LDR              R1, =CSCTL1
+  224 00000126         ; configure for SMCLK divider equal to /4
+  225 00000126         ; configure for HSMCLK divider equal to /2
+  226 00000126         ; configure for all other clock dividers equal to /1
+  227 00000126         ; configure for ACLK sourced from REFOCLK
+  228 00000126         ; configure for SMCLK and HSMCLK sourced from HFXTCLK
+  229 00000126         ; configure for MCLK sourced from HFXTCLK
+  230 00000126 4A71            LDR              R2, =0x20100255
+  231 00000128 600A            STR              R2, [R1]    ; CSCTL1 = 0x201002
+                                                            55
+  232 0000012A         ; lock CS module from unintended access
+  233 0000012A 4960            LDR              R1, =CSKEY
+  234 0000012C F04F 0200       MOV              R2, #0
+  235 00000130 600A            STR              R2, [R1]    ; CSKEY = 0
+  236 00000132 4770            BX               LR          ; return
+  237 00000134         
+  238 00000134         ;------------Clock_Init32kHz------------
+  239 00000134         ; Configure for HSMCLK = MCLK = LFXTCLK,
+  240 00000134         ; SMCLK = LFXTCLK/2, ACLK = REFOCLK.
+  241 00000134         ; On the LaunchPad, the low-frequency crystal
+  242 00000134         ; oscillator has a 32 kHz crystal attached, which will
+  243 00000134         ; make the high speed subsystem master clock and the
+  244 00000134         ; bus (master) clock run at 32 kHz.  The low speed
+  245 00000134         ; subsystem master clock has a maximum frequency of
+  246 00000134         ; 16,384 Hz in LPM3 and LPM3.5, so this function sets
+  247 00000134         ; the SMCLK divider to /2.  This is slower than
+  248 00000134         ; necessary for active mode.  In other words, this
+  249 00000134         ; function is similar to Clock_Init(), except instead
+  250 00000134         ; of the variable frequency DCO this uses the fixed
+  251 00000134         ; low-frequency crystal.
+  252 00000134         ; Input: none
+  253 00000134         ; Output: none
+  254 00000134         ; Modifies: R0, R1, R2, R3
+  255 00000134         Clock_Init32kHz
+  256 00000134         ; wait for the PCMCTL0 and Clock System to be write-able
+                        by waiting for Power Control Manager to be idle
+  257 00000134 F04F 0200       MOV              R2, #0      ; R2 is Prewait cou
+                                                            nter
+  258 00000138 4B5F            LDR              R3, =100000 ; R3 is Prewait cou
+                                                            nter timeout value
+  259 0000013A 4960            LDR              R1, =PCMCTL1
+  260 0000013C         clockInit32PrewaitLoop
+  261 0000013C 6808            LDR              R0, [R1]
+  262 0000013E F410 7080       ANDS             R0, R0, #0x00000100 ; look at P
+                                                            MR_BUSY bit of PCMC
+                                                            TL1
+  263 00000142 D004            BEQ              clockInit32cont0 ; if cleared, 
+                                                            continue
+  264 00000144 F102 0201       ADD              R2, R2, #1  ; increment Prewait
+                                                             counter
+  265 00000148 429A            CMP              R2, R3      ; is Prewait (R2) <
+                                                             timeout (R3)?
+  266 0000014A D3F7            BLO              clockInit32PrewaitLoop ; if so,
+                                                             continue looping
+
+
+
+ARM Macro Assembler    Page 8 
+
+
+  267 0000014C         clockInit32PrewaitTimeout
+  268 0000014C 4770            BX               LR
+  269 0000014E         clockInit32cont0
+  270 0000014E         ; initialize PJ.1 and PJ.0 and make them LFXT (PJ.1 buil
+                       t-in 32 kHz crystal out; PJ.0 built-in 32 kHz crystal in
+                       )
+  271 0000014E         ; configure built-in 32 kHz crystal pins as LFXT
+  272 0000014E 4962            LDR              R1, =PJSEL0
+  273 00000150 8808            LDRH             R0, [R1]
+  274 00000152 F040 0003       ORR              R0, R0, #0x0003 ; configure bui
+                                                            lt-in 32 kHz crysta
+                                                            l for LFXT operatio
+                                                            n
+  275 00000156 8008            STRH             R0, [R1]
+  276 00000158 4960            LDR              R1, =PJSEL1
+  277 0000015A 8808            LDRH             R0, [R1]
+  278 0000015C F020 0003       BIC              R0, R0, #0x0003 ; configure bui
+                                                            lt-in 32 kHz crysta
+                                                            l for LFXT operatio
+                                                            n
+  279 00000160 8008            STRH             R0, [R1]
+  280 00000162         ; unlock CS module for register access
+  281 00000162 4952            LDR              R1, =CSKEY
+  282 00000164 F646 105A       LDR              R0, =0x695A
+  283 00000168 6008            STR              R0, [R1]    ; CSKEY = 0x0000695
+                                                            A
+  284 0000016A         ; configure crystal settings
+  285 0000016A 495D            LDR              R1, =CSCTL2
+  286 0000016C 6808            LDR              R0, [R1]
+  287 0000016E F440 7080       ORR              R0, R0, #0x00000100 
+                                                            ; enable LFXT
+  288 00000172 F020 0003       BIC              R0, R0, #0x00000003 ; clear LFX
+                                                            TDRIVE bit field
+  289 00000176 F040 0003       ORR              R0, R0, #0x00000003 ; configure
+                                                             for maximum drive 
+                                                            strength/current co
+                                                            nsumption
+  290 0000017A 6008            STR              R0, [R1]
+  291 0000017C F420 7000       BIC              R0, R0, #0x00000200 ; disable l
+                                                            ow-frequency crysta
+                                                            l bypass
+  292 00000180 6008            STR              R0, [R1]
+  293 00000182         ; wait for the LFXT clock to stabilize
+  294 00000182 F04F 0200       MOV              R2, #0      ; R2 is Crystalstab
+                                                            le counter
+  295 00000186 4B4C            LDR              R3, =100000 ; R3 is Crystalstab
+                                                            le counter timeout 
+                                                            value
+  296 00000188         clockInit32CrystalLoop
+  297 00000188 4956            LDR              R1, =CSIFG
+  298 0000018A 6808            LDR              R0, [R1]
+  299 0000018C F010 0001       ANDS             R0, R0, #0x00000001 ; look at L
+                                                            FXTIFG bit of CSIFG
+                                                            
+  300 00000190 D008            BEQ              clockInit32cont1 ; if cleared, 
+                                                            continue
+  301 00000192 4955            LDR              R1, =CSCLRIFG
+  302 00000194 F04F 0001       MOV              R0, #0x00000001 
+                                                            ; write 1 to clear
+
+
+
+ARM Macro Assembler    Page 9 
+
+
+  303 00000198 6008            STR              R0, [R1]    ; clear the LFXT os
+                                                            cillator interrupt 
+                                                            flag
+  304 0000019A F102 0201       ADD              R2, R2, #1  ; increment Crystal
+                                                            stable counter
+  305 0000019E 429A            CMP              R2, R3      ; is Crystalstable 
+                                                            (R2) < timeout (R3)
+                                                            ?
+  306 000001A0 D3F2            BLO              clockInit32CrystalLoop ; if so,
+                                                             continue looping
+  307 000001A2         clockInit32CrystalTimeout
+  308 000001A2 4770            BX               LR
+  309 000001A4         clockInit32cont1
+  310 000001A4         ; set subsystem clock sources and dividers
+  311 000001A4 4943            LDR              R1, =CSCTL1
+  312 000001A6         ; configure for SMCLK divider equal to /2 (necessary for
+                        LPM3 and LPM3.5)
+  313 000001A6         ; configure for all other clock dividers equal to /1
+  314 000001A6         ; configure for ACLK sourced from REFOCLK
+  315 000001A6         ; configure for SMCLK and HSMCLK sourced from LFXTCLK
+  316 000001A6         ; configure for MCLK sourced from LFXTCLK
+  317 000001A6 4A52            LDR              R2, =0x10000200
+  318 000001A8 600A            STR              R2, [R1]    ; CSCTL1 = 0x100002
+                                                            00
+  319 000001AA         ; lock CS module from unintended access
+  320 000001AA 4940            LDR              R1, =CSKEY
+  321 000001AC F04F 0200       MOV              R2, #0
+  322 000001B0 600A            STR              R2, [R1]    ; CSKEY = 0
+  323 000001B2         ; wait for the PCMCTL0 and Clock System to be write-able
+                        by waiting for Power Control Manager to be idle
+  324 000001B2 F04F 0200       MOV              R2, #0      ; R2 is Postwait co
+                                                            unter
+  325 000001B6 4B40            LDR              R3, =100000 ; R3 is Postwait co
+                                                            unter timeout value
+                                                            
+  326 000001B8 4940            LDR              R1, =PCMCTL1
+  327 000001BA         clockInit32PostwaitLoop
+  328 000001BA 6808            LDR              R0, [R1]
+  329 000001BC F410 7080       ANDS             R0, R0, #0x00000100 ; look at P
+                                                            MR_BUSY bit of PCMC
+                                                            TL1
+  330 000001C0 D004            BEQ              clockInit32cont2 ; if cleared, 
+                                                            continue
+  331 000001C2 F102 0201       ADD              R2, R2, #1  ; increment Postwai
+                                                            t counter
+  332 000001C6 429A            CMP              R2, R3      ; is Postwait (R2) 
+                                                            < timeout (R3)?
+  333 000001C8 D3F7            BLO              clockInit32PostwaitLoop ; if so
+                                                            , continue looping
+  334 000001CA         clockInit32PostwaitTimeout
+  335 000001CA 4770            BX               LR
+  336 000001CC         clockInit32cont2
+  337 000001CC         ; request power active mode LF VCORE0 to support the 32 
+                       kHz frequency
+  338 000001CC 493C            LDR              R1, =PCMCTL0
+  339 000001CE 6808            LDR              R0, [R1]
+  340 000001D0 4A3C            LDR              R2, =0xFFFF000F ; PCMKEY bit fi
+                                                            eld and AMR bit fie
+                                                            ld
+
+
+
+ARM Macro Assembler    Page 10 
+
+
+  341 000001D2 EA20 0002       BIC              R0, R0, R2  ; clear PCMKEY bit 
+                                                            field and AMR bit f
+                                                            ield
+  342 000001D6 4A3C            LDR              R2, =0x695A0000 ; PCM key value
+                                                            
+  343 000001D8 EA40 0002       ORR              R0, R0, R2  ; write the proper 
+                                                            PCM key to unlock w
+                                                            rite access
+  344 000001DC F040 0008       ORR              R0, R0, #0x00000008 ; request p
+                                                            ower active mode LF
+                                                             VCORE0
+  345 000001E0 6008            STR              R0, [R1]
+  346 000001E2         ; check if the transition is invalid (see Figure 7-3 on 
+                       p344 of datasheet)
+  347 000001E2 493A            LDR              R1, =PCMIFG
+  348 000001E4 6808            LDR              R0, [R1]
+  349 000001E6 F010 0004       ANDS             R0, R0, #0x00000004 ; look at A
+                                                            M_INVALID_TR_IFG bi
+                                                            t of PCMIFG
+  350 000001EA D004            BEQ              clockInit32cont3 ; if cleared, 
+                                                            continue
+  351 000001EC         ; bit 2 set on active mode transition invalid; bits 1-0 
+                       are for LPM-related errors; bit 6 is for DC-DC-related e
+                       rror
+  352 000001EC         ; clear the transition invalid flag
+  353 000001EC 4938            LDR              R1, =PCMCLRIFG
+  354 000001EE F04F 0004       MOV              R0, #0x00000004 
+                                                            ; write 1 to clear
+  355 000001F2 6008            STR              R0, [R1]
+  356 000001F4         ; to do: look at CPM bit field in PCMCTL0, figure out wh
+                       at mode you're in, and step through the chart to transit
+                       ion to the mode you want
+  357 000001F4         ; or be lazy and do nothing; this should work out of res
+                       et at least, but it WILL NOT work if Clock_Int48MHz() ha
+                       s been called
+  358 000001F4 4770            BX               LR
+  359 000001F6         clockInit32cont3
+  360 000001F6         ; wait for the CPM (Current Power Mode) bit field to ref
+                       lect a change to active mode LF VCORE0
+  361 000001F6 F04F 0200       MOV              R2, #0      ; R2 is CPMwait cou
+                                                            nter
+  362 000001FA 4B36            LDR              R3, =500000 ; R3 is CPMwait cou
+                                                            nter timeout value
+  363 000001FC 4930            LDR              R1, =PCMCTL0
+  364 000001FE         clockInit32CPMwaitLoop
+  365 000001FE 6808            LDR              R0, [R1]
+  366 00000200 F400 507C       AND              R0, R0, #0x00003F00 ; look at C
+                                                            PM bit field of PCM
+                                                            CTL0
+  367 00000204 F5B0 6F00       CMP              R0, #0x00000800 ; is CPM bit fi
+                                                            eld (R0) == 0x00000
+                                                            800?
+  368 00000208 D004            BEQ              clockInit32cont4 
+                                                            ; if so, continue
+  369 0000020A F102 0201       ADD              R2, R2, #1  ; increment CPMwait
+                                                             counter
+  370 0000020E 429A            CMP              R2, R3      ; is CPMwait (R2) <
+                                                             timeout (R3)?
+  371 00000210 D3F5            BLO              clockInit32CPMwaitLoop ; if so,
+
+
+
+ARM Macro Assembler    Page 11 
+
+
+                                                             continue looping
+  372 00000212         clockInit32CPMwaitTimeout
+  373 00000212 4770            BX               LR
+  374 00000214         clockInit32cont4
+  375 00000214 4770            BX               LR          ; return
+  376 00000216         
+  377 00000216         ;------------Clock_InitLowPower------------
+  378 00000216         ; Configure for HSMCLK = MCLK = ACLK = REFOCLK,
+  379 00000216         ; SMCLK = REFOCLK/2.
+  380 00000216         ; On the LaunchPad, the low-frequency, low-power
+  381 00000216         ; oscillator has a 32 kHz reference clock, which will
+  382 00000216         ; make the high speed subsystem master clock and the
+  383 00000216         ; bus (master) clock run at 32 kHz.  The low speed
+  384 00000216         ; subsystem master clock has a maximum frequency of
+  385 00000216         ; 16,384 Hz in LPM3 and LPM3.5, so this function sets
+  386 00000216         ; the SMCLK divider to /2.  This is slower than
+  387 00000216         ; necessary for active mode.  In other words, this
+  388 00000216         ; function is similar to Clock_Init32kHz(), except
+  389 00000216         ; instead it should be lower power and slightly less
+  390 00000216         ; accurate.
+  391 00000216         ; Input: none
+  392 00000216         ; Output: none
+  393 00000216         ; Modifies: R0, R1, R2, R3
+  394 00000216         Clock_InitLowPower
+  395 00000216         ; wait for the PCMCTL0 and Clock System to be write-able
+                        by waiting for Power Control Manager to be idle
+  396 00000216 F04F 0200       MOV              R2, #0      ; R2 is Prewait cou
+                                                            nter
+  397 0000021A 4B27            LDR              R3, =100000 ; R3 is Prewait cou
+                                                            nter timeout value
+  398 0000021C 4927            LDR              R1, =PCMCTL1
+  399 0000021E         clockInitLPPrewaitLoop
+  400 0000021E 6808            LDR              R0, [R1]
+  401 00000220 F410 7080       ANDS             R0, R0, #0x00000100 ; look at P
+                                                            MR_BUSY bit of PCMC
+                                                            TL1
+  402 00000224 D004            BEQ              clockInitLPcont0 ; if cleared, 
+                                                            continue
+  403 00000226 F102 0201       ADD              R2, R2, #1  ; increment Prewait
+                                                             counter
+  404 0000022A 429A            CMP              R2, R3      ; is Prewait (R2) <
+                                                             timeout (R3)?
+  405 0000022C D3F7            BLO              clockInitLPPrewaitLoop ; if so,
+                                                             continue looping
+  406 0000022E         clockInitLPPrewaitTimeout
+  407 0000022E 4770            BX               LR
+  408 00000230         clockInitLPcont0
+  409 00000230         ; unlock CS module for register access
+  410 00000230 491E            LDR              R1, =CSKEY
+  411 00000232 F646 105A       LDR              R0, =0x695A
+  412 00000236 6008            STR              R0, [R1]    ; CSKEY = 0x0000695
+                                                            A
+  413 00000238         ; set subsystem clock sources and dividers
+  414 00000238 491E            LDR              R1, =CSCTL1
+  415 0000023A         ; configure for SMCLK divider equal to /2 (necessary for
+                        LPM3 and LPM3.5)
+  416 0000023A         ; configure for all other clock dividers equal to /1
+  417 0000023A         ; configure for ACLK sourced from REFOCLK
+  418 0000023A         ; configure for SMCLK and HSMCLK sourced from REFOCLK
+
+
+
+ARM Macro Assembler    Page 12 
+
+
+  419 0000023A         ; configure for MCLK sourced from REFOCLK
+  420 0000023A 4A2E            LDR              R2, =0x10000222
+  421 0000023C 600A            STR              R2, [R1]    ; CSCTL1 = 0x100002
+                                                            22
+  422 0000023E         ; lock CS module from unintended access
+  423 0000023E 491B            LDR              R1, =CSKEY
+  424 00000240 F04F 0200       MOV              R2, #0
+  425 00000244 600A            STR              R2, [R1]    ; CSKEY = 0
+  426 00000246         ; wait for the PCMCTL0 and Clock System to be write-able
+                        by waiting for Power Control Manager to be idle
+  427 00000246 F04F 0200       MOV              R2, #0      ; R2 is Postwait co
+                                                            unter
+  428 0000024A 4B1B            LDR              R3, =100000 ; R3 is Postwait co
+                                                            unter timeout value
+                                                            
+  429 0000024C 491B            LDR              R1, =PCMCTL1
+  430 0000024E         clockInitLPPostwaitLoop
+  431 0000024E 6808            LDR              R0, [R1]
+  432 00000250 F410 7080       ANDS             R0, R0, #0x00000100 ; look at P
+                                                            MR_BUSY bit of PCMC
+                                                            TL1
+  433 00000254 D004            BEQ              clockInitLPcont1 ; if cleared, 
+                                                            continue
+  434 00000256 F102 0201       ADD              R2, R2, #1  ; increment Postwai
+                                                            t counter
+  435 0000025A 429A            CMP              R2, R3      ; is Postwait (R2) 
+                                                            < timeout (R3)?
+  436 0000025C D3F7            BLO              clockInitLPPostwaitLoop ; if so
+                                                            , continue looping
+  437 0000025E         clockInitLPPostwaitTimeout
+  438 0000025E 4770            BX               LR
+  439 00000260         clockInitLPcont1
+  440 00000260         ; request power active mode LF VCORE0 to support the 32 
+                       kHz frequency
+  441 00000260 4917            LDR              R1, =PCMCTL0
+  442 00000262 6808            LDR              R0, [R1]
+  443 00000264 4A17            LDR              R2, =0xFFFF000F ; PCMKEY bit fi
+                                                            eld and AMR bit fie
+                                                            ld
+  444 00000266 EA20 0002       BIC              R0, R0, R2  ; clear PCMKEY bit 
+                                                            field and AMR bit f
+                                                            ield
+  445 0000026A 4A17            LDR              R2, =0x695A0000 ; PCM key value
+                                                            
+  446 0000026C EA40 0002       ORR              R0, R0, R2  ; write the proper 
+                                                            PCM key to unlock w
+                                                            rite access
+  447 00000270 F040 0008       ORR              R0, R0, #0x00000008 ; request p
+                                                            ower active mode LF
+                                                             VCORE0
+  448 00000274 6008            STR              R0, [R1]
+  449 00000276         ; check if the transition is invalid (see Figure 7-3 on 
+                       p344 of datasheet)
+  450 00000276 4915            LDR              R1, =PCMIFG
+  451 00000278 6808            LDR              R0, [R1]
+  452 0000027A F010 0004       ANDS             R0, R0, #0x00000004 ; look at A
+                                                            M_INVALID_TR_IFG bi
+                                                            t of PCMIFG
+  453 0000027E D004            BEQ              clockInitLPcont2 ; if cleared, 
+
+
+
+ARM Macro Assembler    Page 13 
+
+
+                                                            continue
+  454 00000280         ; bit 2 set on active mode transition invalid; bits 1-0 
+                       are for LPM-related errors; bit 6 is for DC-DC-related e
+                       rror
+  455 00000280         ; clear the transition invalid flag
+  456 00000280 4913            LDR              R1, =PCMCLRIFG
+  457 00000282 F04F 0004       MOV              R0, #0x00000004 
+                                                            ; write 1 to clear
+  458 00000286 6008            STR              R0, [R1]
+  459 00000288         ; to do: look at CPM bit field in PCMCTL0, figure out wh
+                       at mode you're in, and step through the chart to transit
+                       ion to the mode you want
+  460 00000288         ; or be lazy and do nothing; this should work out of res
+                       et at least, but it WILL NOT work if Clock_Int48MHz() ha
+                       s been called
+  461 00000288 4770            BX               LR
+  462 0000028A         clockInitLPcont2
+  463 0000028A         ; wait for the CPM (Current Power Mode) bit field to ref
+                       lect a change to active mode LF VCORE0
+  464 0000028A F04F 0200       MOV              R2, #0      ; R2 is CPMwait cou
+                                                            nter
+  465 0000028E 4B11            LDR              R3, =500000 ; R3 is CPMwait cou
+                                                            nter timeout value
+  466 00000290 490B            LDR              R1, =PCMCTL0
+  467 00000292         clockInitLPCPMwaitLoop
+  468 00000292 6808            LDR              R0, [R1]
+  469 00000294 F400 507C       AND              R0, R0, #0x00003F00 ; look at C
+                                                            PM bit field of PCM
+                                                            CTL0
+  470 00000298 F5B0 6F00       CMP              R0, #0x00000800 ; is CPM bit fi
+                                                            eld (R0) == 0x00000
+                                                            800?
+  471 0000029C D004            BEQ              clockInitLPcont3 
+                                                            ; if so, continue
+  472 0000029E F102 0201       ADD              R2, R2, #1  ; increment CPMwait
+                                                             counter
+  473 000002A2 429A            CMP              R2, R3      ; is CPMwait (R2) <
+                                                             timeout (R3)?
+  474 000002A4 D3F5            BLO              clockInitLPCPMwaitLoop ; if so,
+                                                             continue looping
+  475 000002A6         clockInitLPCPMwaitTimeout
+  476 000002A6 4770            BX               LR
+  477 000002A8         clockInitLPcont3
+  478 000002A8 4770            BX               LR          ; return
+  479 000002AA         
+  480 000002AA 00 00           ALIGN                        ; make sure the end
+                                                             of this section is
+                                                             aligned
+  481 000002AC                 END                          ; end of file
+              40010400 
+              40010404 
+              40010408 
+              000186A0 
+              40010004 
+              40010000 
+              FFFF000F 
+              695A0000 
+              4001000C 
+              40010010 
+
+
+
+ARM Macro Assembler    Page 14 
+
+
+              0007A120 
+              40004D2A 
+              40004D2C 
+              4001040C 
+              40010448 
+              40010450 
+              20100255 
+              10000200 
+              10000222 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4 --apcs=interw
+ork --depend=.\objects\clocksystem.d -o.\objects\clocksystem.o -IC:\Users\antho
+ny.brice423\Desktop\Lab9\TimerA0PWM_MSP432\RTE -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\
+4.5.0\CMSIS\Include -IC:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\Device\
+Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 517" --
+predefine="_RTE_ SETA 1" --predefine="__MSP432P401R__ SETA 1" --list=.\listings
+\clocksystem.lst ClockSystem.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+.text 00000000
+
+Symbol: .text
+   Definitions
+      At line 40 in file ClockSystem.s
+   Uses
+      None
+Comment: .text unused
+Clock_Init 00000000
+
+Symbol: Clock_Init
+   Definitions
+      At line 55 in file ClockSystem.s
+   Uses
+      At line 42 in file ClockSystem.s
+Comment: Clock_Init used once
+Clock_Init32kHz 00000134
+
+Symbol: Clock_Init32kHz
+   Definitions
+      At line 255 in file ClockSystem.s
+   Uses
+      At line 44 in file ClockSystem.s
+Comment: Clock_Init32kHz used once
+Clock_Init48MHz 0000004E
+
+Symbol: Clock_Init48MHz
+   Definitions
+      At line 114 in file ClockSystem.s
+   Uses
+      At line 43 in file ClockSystem.s
+Comment: Clock_Init48MHz used once
+Clock_InitLowPower 00000216
+
+Symbol: Clock_InitLowPower
+   Definitions
+      At line 394 in file ClockSystem.s
+   Uses
+      At line 45 in file ClockSystem.s
+Comment: Clock_InitLowPower used once
+clockInit32CPMwaitLoop 000001FE
+
+Symbol: clockInit32CPMwaitLoop
+   Definitions
+      At line 364 in file ClockSystem.s
+   Uses
+      At line 371 in file ClockSystem.s
+Comment: clockInit32CPMwaitLoop used once
+clockInit32CPMwaitTimeout 00000212
+
+Symbol: clockInit32CPMwaitTimeout
+   Definitions
+      At line 372 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit32CPMwaitTimeout unused
+clockInit32CrystalLoop 00000188
+
+Symbol: clockInit32CrystalLoop
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Relocatable symbols
+
+   Definitions
+      At line 296 in file ClockSystem.s
+   Uses
+      At line 306 in file ClockSystem.s
+Comment: clockInit32CrystalLoop used once
+clockInit32CrystalTimeout 000001A2
+
+Symbol: clockInit32CrystalTimeout
+   Definitions
+      At line 307 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit32CrystalTimeout unused
+clockInit32PostwaitLoop 000001BA
+
+Symbol: clockInit32PostwaitLoop
+   Definitions
+      At line 327 in file ClockSystem.s
+   Uses
+      At line 333 in file ClockSystem.s
+Comment: clockInit32PostwaitLoop used once
+clockInit32PostwaitTimeout 000001CA
+
+Symbol: clockInit32PostwaitTimeout
+   Definitions
+      At line 334 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit32PostwaitTimeout unused
+clockInit32PrewaitLoop 0000013C
+
+Symbol: clockInit32PrewaitLoop
+   Definitions
+      At line 260 in file ClockSystem.s
+   Uses
+      At line 266 in file ClockSystem.s
+Comment: clockInit32PrewaitLoop used once
+clockInit32PrewaitTimeout 0000014C
+
+Symbol: clockInit32PrewaitTimeout
+   Definitions
+      At line 267 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit32PrewaitTimeout unused
+clockInit32cont0 0000014E
+
+Symbol: clockInit32cont0
+   Definitions
+      At line 269 in file ClockSystem.s
+   Uses
+      At line 263 in file ClockSystem.s
+Comment: clockInit32cont0 used once
+clockInit32cont1 000001A4
+
+Symbol: clockInit32cont1
+   Definitions
+      At line 309 in file ClockSystem.s
+   Uses
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Relocatable symbols
+
+      At line 300 in file ClockSystem.s
+Comment: clockInit32cont1 used once
+clockInit32cont2 000001CC
+
+Symbol: clockInit32cont2
+   Definitions
+      At line 336 in file ClockSystem.s
+   Uses
+      At line 330 in file ClockSystem.s
+Comment: clockInit32cont2 used once
+clockInit32cont3 000001F6
+
+Symbol: clockInit32cont3
+   Definitions
+      At line 359 in file ClockSystem.s
+   Uses
+      At line 350 in file ClockSystem.s
+Comment: clockInit32cont3 used once
+clockInit32cont4 00000214
+
+Symbol: clockInit32cont4
+   Definitions
+      At line 374 in file ClockSystem.s
+   Uses
+      At line 368 in file ClockSystem.s
+Comment: clockInit32cont4 used once
+clockInit48CPMwaitLoop 0000009A
+
+Symbol: clockInit48CPMwaitLoop
+   Definitions
+      At line 156 in file ClockSystem.s
+   Uses
+      At line 163 in file ClockSystem.s
+Comment: clockInit48CPMwaitLoop used once
+clockInit48CPMwaitTimeout 000000AE
+
+Symbol: clockInit48CPMwaitTimeout
+   Definitions
+      At line 164 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit48CPMwaitTimeout unused
+clockInit48CrystalLoop 00000108
+
+Symbol: clockInit48CrystalLoop
+   Definitions
+      At line 208 in file ClockSystem.s
+   Uses
+      At line 218 in file ClockSystem.s
+Comment: clockInit48CrystalLoop used once
+clockInit48CrystalTimeout 00000122
+
+Symbol: clockInit48CrystalTimeout
+   Definitions
+      At line 219 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit48CrystalTimeout unused
+clockInit48PostwaitLoop 000000B8
+
+
+
+ARM Macro Assembler    Page 4 Alphabetic symbol ordering
+Relocatable symbols
+
+
+Symbol: clockInit48PostwaitLoop
+   Definitions
+      At line 171 in file ClockSystem.s
+   Uses
+      At line 177 in file ClockSystem.s
+Comment: clockInit48PostwaitLoop used once
+clockInit48PostwaitTimeout 000000C8
+
+Symbol: clockInit48PostwaitTimeout
+   Definitions
+      At line 178 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit48PostwaitTimeout unused
+clockInit48PrewaitLoop 00000056
+
+Symbol: clockInit48PrewaitLoop
+   Definitions
+      At line 119 in file ClockSystem.s
+   Uses
+      At line 125 in file ClockSystem.s
+Comment: clockInit48PrewaitLoop used once
+clockInit48PrewaitTimeout 00000066
+
+Symbol: clockInit48PrewaitTimeout
+   Definitions
+      At line 126 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInit48PrewaitTimeout unused
+clockInit48cont0 00000068
+
+Symbol: clockInit48cont0
+   Definitions
+      At line 128 in file ClockSystem.s
+   Uses
+      At line 122 in file ClockSystem.s
+Comment: clockInit48cont0 used once
+clockInit48cont1 00000092
+
+Symbol: clockInit48cont1
+   Definitions
+      At line 151 in file ClockSystem.s
+   Uses
+      At line 142 in file ClockSystem.s
+Comment: clockInit48cont1 used once
+clockInit48cont2 000000B0
+
+Symbol: clockInit48cont2
+   Definitions
+      At line 166 in file ClockSystem.s
+   Uses
+      At line 160 in file ClockSystem.s
+Comment: clockInit48cont2 used once
+clockInit48cont3 000000CA
+
+Symbol: clockInit48cont3
+   Definitions
+
+
+
+ARM Macro Assembler    Page 5 Alphabetic symbol ordering
+Relocatable symbols
+
+      At line 180 in file ClockSystem.s
+   Uses
+      At line 174 in file ClockSystem.s
+Comment: clockInit48cont3 used once
+clockInit48cont4 00000124
+
+Symbol: clockInit48cont4
+   Definitions
+      At line 221 in file ClockSystem.s
+   Uses
+      At line 212 in file ClockSystem.s
+Comment: clockInit48cont4 used once
+clockInitBadInput 00000016
+
+Symbol: clockInitBadInput
+   Definitions
+      At line 65 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInitBadInput unused
+clockInitContinue 00000018
+
+Symbol: clockInitContinue
+   Definitions
+      At line 67 in file ClockSystem.s
+   Uses
+      At line 58 in file ClockSystem.s
+      At line 60 in file ClockSystem.s
+      At line 62 in file ClockSystem.s
+      At line 64 in file ClockSystem.s
+
+clockInitLPCPMwaitLoop 00000292
+
+Symbol: clockInitLPCPMwaitLoop
+   Definitions
+      At line 467 in file ClockSystem.s
+   Uses
+      At line 474 in file ClockSystem.s
+Comment: clockInitLPCPMwaitLoop used once
+clockInitLPCPMwaitTimeout 000002A6
+
+Symbol: clockInitLPCPMwaitTimeout
+   Definitions
+      At line 475 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInitLPCPMwaitTimeout unused
+clockInitLPPostwaitLoop 0000024E
+
+Symbol: clockInitLPPostwaitLoop
+   Definitions
+      At line 430 in file ClockSystem.s
+   Uses
+      At line 436 in file ClockSystem.s
+Comment: clockInitLPPostwaitLoop used once
+clockInitLPPostwaitTimeout 0000025E
+
+Symbol: clockInitLPPostwaitTimeout
+   Definitions
+
+
+
+ARM Macro Assembler    Page 6 Alphabetic symbol ordering
+Relocatable symbols
+
+      At line 437 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInitLPPostwaitTimeout unused
+clockInitLPPrewaitLoop 0000021E
+
+Symbol: clockInitLPPrewaitLoop
+   Definitions
+      At line 399 in file ClockSystem.s
+   Uses
+      At line 405 in file ClockSystem.s
+Comment: clockInitLPPrewaitLoop used once
+clockInitLPPrewaitTimeout 0000022E
+
+Symbol: clockInitLPPrewaitTimeout
+   Definitions
+      At line 406 in file ClockSystem.s
+   Uses
+      None
+Comment: clockInitLPPrewaitTimeout unused
+clockInitLPcont0 00000230
+
+Symbol: clockInitLPcont0
+   Definitions
+      At line 408 in file ClockSystem.s
+   Uses
+      At line 402 in file ClockSystem.s
+Comment: clockInitLPcont0 used once
+clockInitLPcont1 00000260
+
+Symbol: clockInitLPcont1
+   Definitions
+      At line 439 in file ClockSystem.s
+   Uses
+      At line 433 in file ClockSystem.s
+Comment: clockInitLPcont1 used once
+clockInitLPcont2 0000028A
+
+Symbol: clockInitLPcont2
+   Definitions
+      At line 462 in file ClockSystem.s
+   Uses
+      At line 453 in file ClockSystem.s
+Comment: clockInitLPcont2 used once
+clockInitLPcont3 000002A8
+
+Symbol: clockInitLPcont3
+   Definitions
+      At line 477 in file ClockSystem.s
+   Uses
+      At line 471 in file ClockSystem.s
+Comment: clockInitLPcont3 used once
+43 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+CSCLRIFG 40010450
+
+Symbol: CSCLRIFG
+   Definitions
+      At line 28 in file ClockSystem.s
+   Uses
+      At line 213 in file ClockSystem.s
+      At line 301 in file ClockSystem.s
+
+CSCTL0 40010404
+
+Symbol: CSCTL0
+   Definitions
+      At line 24 in file ClockSystem.s
+   Uses
+      At line 73 in file ClockSystem.s
+Comment: CSCTL0 used once
+CSCTL1 40010408
+
+Symbol: CSCTL1
+   Definitions
+      At line 25 in file ClockSystem.s
+   Uses
+      At line 86 in file ClockSystem.s
+      At line 223 in file ClockSystem.s
+      At line 311 in file ClockSystem.s
+      At line 414 in file ClockSystem.s
+
+CSCTL2 4001040C
+
+Symbol: CSCTL2
+   Definitions
+      At line 26 in file ClockSystem.s
+   Uses
+      At line 196 in file ClockSystem.s
+      At line 285 in file ClockSystem.s
+
+CSIFG 40010448
+
+Symbol: CSIFG
+   Definitions
+      At line 27 in file ClockSystem.s
+   Uses
+      At line 209 in file ClockSystem.s
+      At line 297 in file ClockSystem.s
+
+CSKEY 40010400
+
+Symbol: CSKEY
+   Definitions
+      At line 23 in file ClockSystem.s
+   Uses
+      At line 69 in file ClockSystem.s
+      At line 94 in file ClockSystem.s
+      At line 192 in file ClockSystem.s
+      At line 233 in file ClockSystem.s
+      At line 281 in file ClockSystem.s
+      At line 320 in file ClockSystem.s
+      At line 410 in file ClockSystem.s
+
+
+
+ARM Macro Assembler    Page 2 Alphabetic symbol ordering
+Absolute symbols
+
+      At line 423 in file ClockSystem.s
+
+DCO12MHz 00030000
+
+Symbol: DCO12MHz
+   Definitions
+      At line 38 in file ClockSystem.s
+   Uses
+      At line 63 in file ClockSystem.s
+Comment: DCO12MHz used once
+DCO1_5MHz 00000000
+
+Symbol: DCO1_5MHz
+   Definitions
+      At line 35 in file ClockSystem.s
+   Uses
+      At line 57 in file ClockSystem.s
+Comment: DCO1_5MHz used once
+DCO3MHz 00010000
+
+Symbol: DCO3MHz
+   Definitions
+      At line 36 in file ClockSystem.s
+   Uses
+      At line 59 in file ClockSystem.s
+Comment: DCO3MHz used once
+DCO6MHz 00020000
+
+Symbol: DCO6MHz
+   Definitions
+      At line 37 in file ClockSystem.s
+   Uses
+      At line 61 in file ClockSystem.s
+Comment: DCO6MHz used once
+PCMCLRIFG 40010010
+
+Symbol: PCMCLRIFG
+   Definitions
+      At line 34 in file ClockSystem.s
+   Uses
+      At line 145 in file ClockSystem.s
+      At line 353 in file ClockSystem.s
+      At line 456 in file ClockSystem.s
+
+PCMCTL0 40010000
+
+Symbol: PCMCTL0
+   Definitions
+      At line 31 in file ClockSystem.s
+   Uses
+      At line 130 in file ClockSystem.s
+      At line 155 in file ClockSystem.s
+      At line 338 in file ClockSystem.s
+      At line 363 in file ClockSystem.s
+      At line 441 in file ClockSystem.s
+      At line 466 in file ClockSystem.s
+
+PCMCTL1 40010004
+
+
+
+
+ARM Macro Assembler    Page 3 Alphabetic symbol ordering
+Absolute symbols
+
+Symbol: PCMCTL1
+   Definitions
+      At line 32 in file ClockSystem.s
+   Uses
+      At line 118 in file ClockSystem.s
+      At line 170 in file ClockSystem.s
+      At line 259 in file ClockSystem.s
+      At line 326 in file ClockSystem.s
+      At line 398 in file ClockSystem.s
+      At line 429 in file ClockSystem.s
+
+PCMIFG 4001000C
+
+Symbol: PCMIFG
+   Definitions
+      At line 33 in file ClockSystem.s
+   Uses
+      At line 139 in file ClockSystem.s
+      At line 347 in file ClockSystem.s
+      At line 450 in file ClockSystem.s
+
+PJSEL0 40004D2A
+
+Symbol: PJSEL0
+   Definitions
+      At line 29 in file ClockSystem.s
+   Uses
+      At line 183 in file ClockSystem.s
+      At line 272 in file ClockSystem.s
+
+PJSEL1 40004D2C
+
+Symbol: PJSEL1
+   Definitions
+      At line 30 in file ClockSystem.s
+   Uses
+      At line 187 in file ClockSystem.s
+      At line 276 in file ClockSystem.s
+
+16 symbols
+395 symbols in table

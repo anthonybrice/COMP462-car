@@ -1,0 +1,343 @@
+
+
+
+ARM Macro Assembler    Page 1 
+
+
+    1 00000000         ; SysTick.s
+    2 00000000         ; Runs on MSP432
+    3 00000000         ; Provide functions that initialize the SysTick module, 
+                       wait at least a
+    4 00000000         ; designated number of clock cycles, and wait approximat
+                       ely a multiple
+    5 00000000         ; of 10 milliseconds using busy wait.  After a power-on-
+                       reset, the
+    6 00000000         ; MSP432 gets its clock from the internal digitally cont
+                       rolled
+    7 00000000         ; oscillator, which is set to 3 MHz by default.  One dis
+                       tinct advantage
+    8 00000000         ; of the MSP432 is that it has low-power clock options t
+                       o reduce power
+    9 00000000         ; consumption by reducing clock frequency.  This matters
+                        for the
+   10 00000000         ; function SysTick_Wait10ms(), which will wait longer th
+                       an 10 ms if the
+   11 00000000         ; clock is slower.
+   12 00000000         ; Daniel Valvano
+   13 00000000         ; May 4, 2015
+   14 00000000         
+   15 00000000         ;  This example accompanies the book
+   16 00000000         ;  "Embedded Systems: Introduction to the MSP432 Microco
+                       ntroller",
+   17 00000000         ;  ISBN: 978-1512185676, Jonathan Valvano, copyright (c)
+                        2015
+   18 00000000         ;  Volume 1, Program 4.7
+   19 00000000         ;
+   20 00000000         ;Copyright 2015 by Jonathan W. Valvano, valvano@mail.ute
+                       xas.edu
+   21 00000000         ;   You may use, edit, run or distribute this file
+   22 00000000         ;   as long as the above copyright notice remains
+   23 00000000         ;THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHET
+                       HER EXPRESS, IMPLIED
+   24 00000000         ;OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WA
+                       RRANTIES OF
+   25 00000000         ;MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE AP
+                       PLY TO THIS SOFTWARE.
+   26 00000000         ;VALVANO SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR 
+                       SPECIAL, INCIDENTAL,
+   27 00000000         ;OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
+   28 00000000         ;For more information about my classes, my research, and
+                        my books, see
+   29 00000000         ;http://users.ece.utexas.edu/~valvano/
+   30 00000000         
+   31 00000000 E000E010 
+                       SYSTICK_STCSR
+                               EQU              0xE000E010  ; SysTick Control a
+                                                            nd Status Register
+   32 00000000 E000E014 
+                       SYSTICK_STRVR
+                               EQU              0xE000E014  ; SysTick Reload Va
+                                                            lue Register
+   33 00000000 E000E018 
+                       SYSTICK_STCVR
+                               EQU              0xE000E018  ; SysTick Current V
+                                                            alue Register
+   34 00000000         
+
+
+
+ARM Macro Assembler    Page 2 
+
+
+   35 00000000                 AREA             |.text|, CODE, READONLY, ALIGN=
+2
+   36 00000000                 THUMB
+   37 00000000                 EXPORT           SysTick_Init
+   38 00000000         
+   39 00000000         ;------------SysTick_Init------------
+   40 00000000         ; Initialize SysTick with busy wait running at bus clock
+                       .
+   41 00000000         ; Input: none
+   42 00000000         ; Output: none
+   43 00000000         ; Modifies: R0, R1
+   44 00000000         SysTick_Init
+   45 00000000         ; disable SysTick during setup
+   46 00000000 B510            PUSH             {R4,LR}     ; save current valu
+                                                            e of R4 and LR
+   47 00000002 4604            MOV              R4, R0      ; Move period from 
+                                                            R0 into R4
+   48 00000004 3C01            SUBS             R4, #1      ; Subtract 1 from p
+                                                            eriod
+   49 00000006 4916            LDR              R1, =SYSTICK_STCSR ; R1 = &SYST
+                                                            ICK_STCSR (pointer)
+                                                            
+   50 00000008 F04F 0000       MOV              R0, #0      ; ENABLE = 0; TICKI
+                                                            NT = 0
+   51 0000000C 6008            STR              R0, [R1]
+   52 0000000E         ; maximum reload value
+   53 0000000E 4915            LDR              R1, =SYSTICK_STRVR ; R1 = &SYST
+                                                            ICK_STRVR (pointer)
+                                                            
+   54 00000010 6820            LDR              R0, [R4]    ; R0 = period - 1
+   55 00000012 6008            STR              R0, [R1]
+   56 00000014         ; any write to current clears it
+   57 00000014 4914            LDR              R1, =SYSTICK_STCVR ; R1 = &SYST
+                                                            ICK_STCVR (pointer)
+                                                            
+   58 00000016 F04F 0000       MOV              R0, #0      ; R0 = 0
+   59 0000001A 6008            STR              R0, [R1]
+   60 0000001C         ; enable SysTick with interrupts
+   61 0000001C 4910            LDR              R1, =SYSTICK_STCSR ; R1 = &SYST
+                                                            ICK_STCSR (pointer)
+                                                            
+   62 0000001E F04F 0007       MOV              R0, #0x00000007 ; R0 = ENABLE a
+                                                            nd CLKSOURCE bits s
+                                                            et; TICKINT bit Set
+                                                            
+   63 00000022 6008            STR              R0, [R1]
+   64 00000024 E8BD 4010       POP              {R4, LR}    ; restore previous 
+                                                            value of R4 and LR
+   65 00000028 4770            BX               LR          ; return
+   66 0000002A         
+   67 0000002A         ;------------SysTick_Wait------------
+   68 0000002A         ; Time delay using busy wait.
+   69 0000002A         ; Input: R0  delay parameter in units of the core clock 
+                       (units of 333 nsec for 3 MHz clock)
+   70 0000002A         ; Output: none
+   71 0000002A         ; Modifies: R0, R1, R2, R3
+   72 0000002A         SysTick_Wait
+   73 0000002A         ; method #1: set Reload Value Register, clear Current Va
+                       lue Register, poll COUNTFLAG in Control and Status Regis
+
+
+
+ARM Macro Assembler    Page 3 
+
+
+                       ter
+   74 0000002A 490E            LDR              R1, =SYSTICK_STRVR ; R1 = &SYST
+                                                            ICK_STRVR (pointer)
+                                                            
+   75 0000002C F1A0 0001       SUB              R0, R0, #1  ; subtract 1 becaus
+                                                            e SysTick counts fr
+                                                            om STRVR to 0
+   76 00000030 6008            STR              R0, [R1]    ; [R1] = number of 
+                                                            counts to wait
+   77 00000032 490D            LDR              R1, =SYSTICK_STCVR ; R1 = &SYST
+                                                            ICK_STCVR (pointer)
+                                                            
+   78 00000034 F04F 0200       MOV              R2, #0      ; any write to CVR 
+                                                            clears it and COUNT
+                                                            FLAG in CSR
+   79 00000038 6008            STR              R0, [R1]    ; [R1] = 0
+   80 0000003A 4909            LDR              R1, =SYSTICK_STCSR ; R1 = &SYST
+                                                            ICK_STCSR (pointer)
+                                                            
+   81 0000003C         SysTick_Wait_loop
+   82 0000003C 680B            LDR              R3, [R1]    ; R3 = SYSTICK_STCS
+                                                            R (value)
+   83 0000003E F413 3380       ANDS             R3, R3, #0x00010000 
+                                                            ; is COUNTFLAG set?
+                                                            
+   84 00000042 D0FB            BEQ              SysTick_Wait_loop ; if not, kee
+                                                            p polling
+   85 00000044         ; method #2: repeatedly evaluate elapsed time
+   86 00000044         ;    LDR  R1, =SYSTICK_STCVR         ; R1 = &SYSTICK_STC
+                       VR (pointer)
+   87 00000044         ;    LDR  R2, [R1]                   ; R2 = startTime = 
+                       SYSTICK_STCVR (value)
+   88 00000044         ;SysTick_Wait_loop
+   89 00000044         ;    LDR  R3, [R1]                   ; R3 = currentTime 
+                       = SYSTICK_STCVR (value)
+   90 00000044         ;    SUB  R3, R2, R3                 ; R3 = elapsedTime 
+                       = (startTime - currentTime)
+   91 00000044         ;    ; handle case where currentTime wraps around and is
+                        greater than startTime
+   92 00000044         ;    BIC  R3, R3, #0xFF000000        ; R3 = elapsedTime 
+                       = (startTime - currentTime)&0x00FFFFFF
+   93 00000044         ;    CMP  R3, R0                     ; is R3 (elapsedTim
+                       e) <= R0 (delay)?
+   94 00000044         ;    BLS  SysTick_Wait_loop          ; if so, keep polli
+                       ng
+   95 00000044 4770            BX               LR          ; return
+   96 00000046         
+   97 00000046         ;------------SysTick_Wait10ms------------
+   98 00000046         ; Time delay using busy wait.  This assumes 3 MHz system
+                        clock.
+   99 00000046         ; Input: R0  number of times to wait 10 ms before return
+                       ing
+  100 00000046         ; Output: none
+  101 00000046         ; Modifies: R0
+  102 00000046 00007530 
+                       DELAY10MS
+                               EQU              30000       ; clock cycles in 1
+                                                            0 ms (assumes 3 MHz
+                                                             clock)
+
+
+
+ARM Macro Assembler    Page 4 
+
+
+  103 00000046         SysTick_Wait10ms
+  104 00000046 B510            PUSH             {R4, LR}    ; save current valu
+                                                            e of R4 and LR
+  105 00000048 0004            MOVS             R4, R0      ; R4 = R0 = remaini
+                                                            ngWaits
+  106 0000004A D005            BEQ              SysTick_Wait10ms_done 
+                                                            ; R4 == 0, done
+  107 0000004C         SysTick_Wait10ms_loop
+  108 0000004C F247 5030       LDR              R0, =DELAY10MS ; R0 = DELAY10MS
+                                                            
+  109 00000050 F7FF FFEB       BL               SysTick_Wait ; wait 10 ms
+  110 00000054 1E64            SUBS             R4, R4, #1  ; R4 = R4 - 1; rema
+                                                            iningWaits--
+  111 00000056 D8F9            BHI              SysTick_Wait10ms_loop ; if(R4 >
+                                                             0), wait another 1
+                                                            0 ms
+  112 00000058         SysTick_Wait10ms_done
+  113 00000058 E8BD 4010       POP              {R4, LR}    ; restore previous 
+                                                            value of R4 and LR
+  114 0000005C 4770            BX               LR          ; return
+  115 0000005E         
+  116 0000005E 00 00           ALIGN                        ; make sure the end
+                                                             of this section is
+                                                             aligned
+  117 00000060                 END                          ; end of file
+              E000E010 
+              E000E014 
+              E000E018 
+Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4 --apcs=interw
+ork --depend=.\objects\systick.d -o.\objects\systick.o -IC:\Users\anthony.brice
+423\Desktop\Lab9\TimerA0PWM_MSP432\RTE -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\CM
+SIS\Include -IC:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\Device\Include 
+--predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 517" --predefin
+e="_RTE_ SETA 1" --predefine="__MSP432P401R__ SETA 1" --list=.\listings\systick
+.lst SysTick.s
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Relocatable symbols
+
+.text 00000000
+
+Symbol: .text
+   Definitions
+      At line 35 in file SysTick.s
+   Uses
+      None
+Comment: .text unused
+SysTick_Init 00000000
+
+Symbol: SysTick_Init
+   Definitions
+      At line 44 in file SysTick.s
+   Uses
+      At line 37 in file SysTick.s
+Comment: SysTick_Init used once
+SysTick_Wait 0000002A
+
+Symbol: SysTick_Wait
+   Definitions
+      At line 72 in file SysTick.s
+   Uses
+      At line 109 in file SysTick.s
+Comment: SysTick_Wait used once
+SysTick_Wait10ms 00000046
+
+Symbol: SysTick_Wait10ms
+   Definitions
+      At line 103 in file SysTick.s
+   Uses
+      None
+Comment: SysTick_Wait10ms unused
+SysTick_Wait10ms_done 00000058
+
+Symbol: SysTick_Wait10ms_done
+   Definitions
+      At line 112 in file SysTick.s
+   Uses
+      At line 106 in file SysTick.s
+Comment: SysTick_Wait10ms_done used once
+SysTick_Wait10ms_loop 0000004C
+
+Symbol: SysTick_Wait10ms_loop
+   Definitions
+      At line 107 in file SysTick.s
+   Uses
+      At line 111 in file SysTick.s
+Comment: SysTick_Wait10ms_loop used once
+SysTick_Wait_loop 0000003C
+
+Symbol: SysTick_Wait_loop
+   Definitions
+      At line 81 in file SysTick.s
+   Uses
+      At line 84 in file SysTick.s
+Comment: SysTick_Wait_loop used once
+7 symbols
+
+
+
+ARM Macro Assembler    Page 1 Alphabetic symbol ordering
+Absolute symbols
+
+DELAY10MS 00007530
+
+Symbol: DELAY10MS
+   Definitions
+      At line 102 in file SysTick.s
+   Uses
+      At line 108 in file SysTick.s
+Comment: DELAY10MS used once
+SYSTICK_STCSR E000E010
+
+Symbol: SYSTICK_STCSR
+   Definitions
+      At line 31 in file SysTick.s
+   Uses
+      At line 49 in file SysTick.s
+      At line 61 in file SysTick.s
+      At line 80 in file SysTick.s
+
+SYSTICK_STCVR E000E018
+
+Symbol: SYSTICK_STCVR
+   Definitions
+      At line 33 in file SysTick.s
+   Uses
+      At line 57 in file SysTick.s
+      At line 77 in file SysTick.s
+
+SYSTICK_STRVR E000E014
+
+Symbol: SYSTICK_STRVR
+   Definitions
+      At line 32 in file SysTick.s
+   Uses
+      At line 53 in file SysTick.s
+      At line 74 in file SysTick.s
+
+4 symbols
+347 symbols in table
