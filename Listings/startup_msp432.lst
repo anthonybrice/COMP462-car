@@ -536,11 +536,11 @@ ARM Macro Assembler    Page 9
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M4 --apcs=interw
 ork --depend=.\objects\startup_msp432.d -o.\objects\startup_msp432.o -IC:\Users
-\anthony.brice423\Desktop\Lab9\TimerA0PWM_MSP432\RTE -IC:\Keil_v5\ARM\PACK\ARM\
-CMSIS\4.5.0\CMSIS\Include -IC:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\D
-evice\Include --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 5
-17" --predefine="_RTE_ SETA 1" --predefine="__MSP432P401R__ SETA 1" --list=.\li
-stings\startup_msp432.lst RTE\Device\MSP432P401R\startup_msp432.s
+\anthony.brice423\Desktop\COMP462-car\RTE -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0
+\CMSIS\Include -IC:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\Device\Inclu
+de --predefine="__EVAL SETA 1" --predefine="__UVISION_VERSION SETA 517" --prede
+fine="_RTE_ SETA 1" --predefine="__MSP432P401R__ SETA 1" --list=.\listings\star
+tup_msp432.lst RTE\Device\MSP432P401R\startup_msp432.s
 
 
 

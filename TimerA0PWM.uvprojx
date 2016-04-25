@@ -436,6 +436,16 @@
               <FileType>2</FileType>
               <FilePath>.\SysTick.s</FilePath>
             </File>
+            <File>
+              <FileName>InputCapture.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\InputCapture.c</FilePath>
+            </File>
+            <File>
+              <FileName>InputCapture.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\InputCapture.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

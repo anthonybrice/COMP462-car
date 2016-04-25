@@ -32,3 +32,5 @@
 //             parameter is 16-bit up-counting timer value when edge occurred
 // Output: none
 void TimerCapture_Init(void(*task)(uint16_t time));
+
+void TimerCapture1_Init(void(*task)(uint16_t time));

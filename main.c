@@ -64,7 +64,7 @@ void period_measure(uint16_t time) {
 int main(void){int i; uint16_t duty;
 	//SysTick_Init(10);
 	//Clock_Init48MHz();
-  PWM_Init(15000,11250,3750); //while(1){};
+  PWM_Init(15000,7500,7500); //while(1){};
   // Squarewave Period/4 (20ms)
   // P2.4 CCR1 75% PWM duty cycle, 10ms period
   // P2.5 CCR2 25% PWM duty cycle, 10ms period
@@ -84,7 +84,7 @@ int main(void){int i; uint16_t duty;
 //  P2DIR |= 0x07;                   // make built-in RGB LEDs out
 //  P2OUT &= ~0x07;                  // RGB = off
 	
-	TimerCapture_Init(&period_measure);
+	TimerCapture1_Init(&period_measure);
 //	
 //	PWM_Duty1(10000);
 //	PWM_Duty2(10000);
