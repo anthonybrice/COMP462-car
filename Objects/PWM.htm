@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\PWM.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\PWM.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Mon Apr 25 13:03:05 2016
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Wed Apr 27 12:00:48 2016
 <BR><P>
 <H3>Maximum Stack Usage =         16 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -431,7 +431,9 @@ Global Symbols
 </UL>
 <P><STRONG><a name="[3b]"></a>DisableInterrupts</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, startup_msp432.o(.text), UNUSED, KEPT)
 
-<P><STRONG><a name="[3c]"></a>EnableInterrupts</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, startup_msp432.o(.text), UNUSED, KEPT)
+<P><STRONG><a name="[3c]"></a>EnableInterrupts</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, startup_msp432.o(.text))
+<BR><BR>[Called By]<UL><LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+</UL>
 
 <P><STRONG><a name="[3d]"></a>StartCritical</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, startup_msp432.o(.text))
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TimerCapture1_Init
@@ -539,7 +541,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[4a]"></a>main</STRONG> (Thumb, 74 bytes, Stack size 0 bytes, main.o(i.main))
+<P><STRONG><a name="[4a]"></a>main</STRONG> (Thumb, 86 bytes, Stack size 0 bytes, main.o(i.main))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16 + Unknown Stack Size
 <LI>Call Chain = main &rArr; TimerCapture1_Init
 </UL>
@@ -548,6 +550,7 @@ Global Symbols
 <LI><a href="#[52]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Init
 <LI><a href="#[58]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Duty2
 <LI><a href="#[57]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Duty1
+<LI><a href="#[3c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EnableInterrupts
 <LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;logic_init
 <LI><a href="#[56]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;encoder_init
 </UL>

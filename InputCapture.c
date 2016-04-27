@@ -99,7 +99,7 @@ void TA0_0_IRQHandler(void){
 // Input: task is a pointer to a user function called when edge occurs
 //             parameter is 16-bit up-counting timer value when edge occurred
 // Output: none
-void TimerCapture1_Init(void (*task) (uint16_t time)){
+void TimerCapture1_Init(void (*task) (uint16_t time)) {
 	long sr;
   sr = StartCritical();
   CaptureTask = task;              // user function
@@ -133,7 +133,7 @@ void TimerCapture1_Init(void (*task) (uint16_t time)){
   TA1EX0 &= ~0x0007;       // configure for input clock divider /1
   NVIC_IPR2 = (NVIC_IPR2&0xFFFFFF00)|0x00000040; // priority 2
 // interrupts enabled in the main program after all devices initialized
-  NVIC_ISER0 = 0x00000100; // enable interrupt 8 in NVIC
+  NVIC_ISER0 = 0x00000400; // enable interrupt 10 in NVIC
   TA1CTL |= 0x0024;        // reset and start Timer A0 in continuous up mode
   // bits15-10=XXXXXX, reserved
   // bits9-8=10,       clock source to SMCLK

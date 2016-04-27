@@ -85,14 +85,18 @@ int main(void){int i; uint16_t duty;
 //  P2OUT &= ~0x07;                  // RGB = off
 	
 	TimerCapture1_Init(&period_measure);
+	EnableInterrupts();
 //	
 //	PWM_Duty1(10000);
 //	PWM_Duty2(10000);
   while (1){
+		int foo = 0;
 		WaitForInterrupt();
     for (duty = 50; duty<15000; duty = duty+1000) {
       PWM_Duty1(duty);
       PWM_Duty2(duty);
+			
+			foo = leftPeriod;
 			
 			// read encoders
 //			if (P4IN & 0x01) rightCount++;
