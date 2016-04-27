@@ -34,6 +34,8 @@
 #include "InputCapture.h"
 #include "PWM.h"
 
+#include "Nokia5110.h"
+
 void DisableInterrupts(void); // Disable interrupts
 void EnableInterrupts(void);  // Enable interrupts
 long StartCritical (void);    // previous I bit, disable interrupts
@@ -43,7 +45,8 @@ void WaitForInterrupt(void);  // low power mode
 void logic_init(void);
 void encoder_init(void);
 void period_measure_init(void);
-void period_measure(uint16_t time);
+void left_period_measure(uint16_t time);
+void right_period_measure(uint16_t time);
 
 // 50Hz squarewave on P7.3
 // P2.4=1 when timer equals TA0CCR1 on way down, P2.4=0 when timer equals TA0CCR1 on way up
@@ -51,14 +54,43 @@ void period_measure(uint16_t time);
 //uint32_t leftCount = 0;
 //uint32_t rightCount = 0;
 uint16_t leftPeriod;
-uint16_t first;
-int done;
+uint16_t leftFirst;
+int leftDone;
+uint16_t leftCount = 0;
 
-void period_measure(uint16_t time) {
+uint16_t rightPeriod;
+uint16_t rightFirst;
+int rightDone;
+uint16_t rightCount = 0;
+
+void left_period_measure(uint16_t time) {
 	P2OUT = P2OUT^0x02;              // toggle P2.1
-  leftPeriod = (time - first)&0xFFFF;  // 16 bits, 83.3 ns resolution
-  first = time;                    // setup for next
-  done = 1;
+  leftPeriod = (time - leftFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
+  leftFirst = time;                    // setup for next
+  leftDone = 1;
+	
+//	if (P2OUT & 0x02) 
+//	{
+//		count++;
+//		Nokia5110_Clear();
+//		Nokia5110_OutString("Ticks: ");
+//		Nokia5110_OutUDec(count);
+//		Nokia5110_OutString("            ");
+//		Nokia5110_OutString("Period");
+//		Nokia5110_OutUDec(leftPeriod);
+//	}
+}
+
+void right_period_measure(uint16_t time) {
+	P3OUT = P3OUT^0x02;              // toggle P2.1
+  rightPeriod = (time - rightFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
+  rightFirst = time;                    // setup for next
+  rightDone = 1;
+	
+	if (P2OUT & 0x02) 
+	{
+		leftCount++;
+	}
 }
 
 int main(void){int i; uint16_t duty;
@@ -73,6 +105,7 @@ int main(void){int i; uint16_t duty;
   // P2.4 CCR1 66% PWM duty cycle, 13.3us period
   // P2.5 CCR2 33% PWM duty cycle, 10us period
 	
+	Nokia5110_Init();
 	logic_init();
 	encoder_init();
 //	
@@ -84,7 +117,8 @@ int main(void){int i; uint16_t duty;
 //  P2DIR |= 0x07;                   // make built-in RGB LEDs out
 //  P2OUT &= ~0x07;                  // RGB = off
 	
-	TimerCapture1_Init(&period_measure);
+	TimerCapture1_Init(&left_period_measure);
+	TimerCapture2_Init(&right_period_measure);
 	EnableInterrupts();
 //	
 //	PWM_Duty1(10000);
@@ -96,7 +130,14 @@ int main(void){int i; uint16_t duty;
       PWM_Duty1(duty);
       PWM_Duty2(duty);
 			
-			foo = leftPeriod;
+			Nokia5110_Clear();
+			Nokia5110_OutString("LTicks:");
+			Nokia5110_OutUDec(leftCount);
+			Nokia5110_OutString("            ");
+			Nokia5110_OutString("RTicks:");
+			Nokia5110_OutUDec(rightCount);
+			//Nokia5110_OutString("Period ");
+			//Nokia5110_OutUDec(leftPeriod);
 			
 			// read encoders
 //			if (P4IN & 0x01) rightCount++;
@@ -121,8 +162,10 @@ void logic_init() {
 }
 
 void period_measure_init() {
-	first = 0;
-	done = 0;
+	leftFirst = 0;
+	leftDone = 0;
+	rightFirst = 0;
+	rightDone = 0;
 }
 
 void encoder_init() {

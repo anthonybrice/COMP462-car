@@ -13,3 +13,4 @@
 .\objects\main.o: SysTickInts.h
 .\objects\main.o: InputCapture.h
 .\objects\main.o: PWM.h
+.\objects\main.o: Nokia5110.h

@@ -34,3 +34,4 @@
 void TimerCapture_Init(void(*task)(uint16_t time));
 
 void TimerCapture1_Init(void(*task)(uint16_t time));
+void TimerCapture2_Init(void(*task)(uint16_t time));

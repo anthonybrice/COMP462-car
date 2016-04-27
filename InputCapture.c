@@ -33,6 +33,7 @@ long StartCritical (void);    // previous I bit, disable interrupts
 void EndCritical(long sr);    // restore I bit to previous value
 void WaitForInterrupt(void);  // low power mode
 void (*CaptureTask)(uint16_t time);// user function
+void (*CaptureTask2)(uint16_t time);
 
 //------------TimerCapture_Init------------
 // Initialize Timer A0 in edge time mode to request interrupts on
@@ -133,7 +134,7 @@ void TimerCapture1_Init(void (*task) (uint16_t time)) {
   TA1EX0 &= ~0x0007;       // configure for input clock divider /1
   NVIC_IPR2 = (NVIC_IPR2&0xFFFFFF00)|0x00000040; // priority 2
 // interrupts enabled in the main program after all devices initialized
-  NVIC_ISER0 = 0x00000400; // enable interrupt 10 in NVIC
+  //NVIC_ISER0 = 0x00000400; // enable interrupt 10 in NVIC
   TA1CTL |= 0x0024;        // reset and start Timer A0 in continuous up mode
   // bits15-10=XXXXXX, reserved
   // bits9-8=10,       clock source to SMCLK
@@ -150,3 +151,63 @@ void TA1_0_IRQHandler(void){
   TA1CCTL0 &= ~0x0001;             // acknowledge capture/compare interrupt 0
   (*CaptureTask)(TA1CCR0);         // execute user task
 }
+	
+	//------------TimerCapture_Init------------
+// Initialize Timer A1 in edge time mode to request interrupts on
+// the rising edge of P8.0 (TA1CCP0).  The interrupt service routine
+// acknowledges the interrupt and calls a user function.
+// Input: task is a pointer to a user function called when edge occurs
+//             parameter is 16-bit up-counting timer value when edge occurred
+// Output: none
+void TimerCapture2_Init(void (*task) (uint16_t time)) {
+	long sr;
+  sr = StartCritical();
+  CaptureTask = task;              // user function
+  // initialize P7.3 and make it input (P7.3 TA0CCP0)
+  P8SEL0 |= 0x02;
+  P8SEL1 &= ~0x02;                 // configure P8.0 as TA1CCP0
+  P8DIR &= ~0x02;                  // make P8.0 in
+  TA2CTL &= ~0x0030;               // halt Timer A0
+  // bits15-10=XXXXXX, reserved
+  // bits9-8=10,       clock source to SMCLK
+  // bits7-6=00,       input clock divider /1
+  // bits5-4=00,       stop mode
+  // bit3=X,           reserved
+  // bit2=0,           set this bit to clear
+  // bit1=0,           interrupt disable
+  // bit0=0,           clear interrupt pending
+  TA2CTL = 0x0200;
+  // bits15-14=01,     capture on rising edge
+  // bits13-12=00,     capture/compare input on CCI0A
+  // bit11=1,          synchronous capture source
+  // bit10=X,          synchronized capture/compare input
+  // bit9=X,           reserved
+  // bit8=1,           capture mode
+  // bits7-5=XXX,      output mode
+  // bit4=1,           enable capture/compare interrupt
+  // bit3=X,           read capture/compare input from here
+  // bit2=X,           output this value in output mode 0
+  // bit1=X,           capture overflow status
+  // bit0=0,           clear capture/compare interrupt pending
+  TA2CCTL0 = 0x4910;
+  TA2EX0 &= ~0x0007;       // configure for input clock divider /1
+  NVIC_IPR2 = (NVIC_IPR2&0xFFFFFF00)|0x00000040; // priority 2
+// interrupts enabled in the main program after all devices initialized
+  NVIC_ISER0 = 0x00001400; // enable interrupt 10 in NVIC
+  TA2CTL |= 0x0024;        // reset and start Timer A0 in continuous up mode
+  // bits15-10=XXXXXX, reserved
+  // bits9-8=10,       clock source to SMCLK
+  // bits7-6=00,       input clock divider /1
+  // bits5-4=10,       continuous count up mode
+  // bit3=X,           reserved
+  // bit2=1,           set this bit to clear
+  // bit1=0,           interrupt disable (no interrupt on rollover)
+  // bit0=0,           clear interrupt pending
+  EndCritical(sr);
+}
+
+void TA2_0_IRQHandler(void) {
+  TA2CCTL0 &= ~0x0001;             // acknowledge capture/compare interrupt 0
+  (*CaptureTask2)(TA2CCR0);         // execute user task
+}
+
