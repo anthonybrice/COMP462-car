@@ -100,14 +100,21 @@ void TA0_0_IRQHandler(void){
 // Input: task is a pointer to a user function called when edge occurs
 //             parameter is 16-bit up-counting timer value when edge occurred
 // Output: none
-void TimerCapture1_Init(void (*task) (uint16_t time)) {
+void TimerCapture1_Init(void (*task1) (uint16_t time), void (*task2) (uint16_t time)) {
 	long sr;
   sr = StartCritical();
-  CaptureTask = task;              // user function
-  // initialize P7.3 and make it input (P7.3 TA0CCP0)
+  CaptureTask = task1;              // user function
+	CaptureTask2 = task2;
+  // initialize P8.0 and P7.7 and make them input
+	
   P8SEL0 |= 0x01;
   P8SEL1 &= ~0x01;                 // configure P8.0 as TA1CCP0
   P8DIR &= ~0x01;                  // make P8.0 in
+	
+	P7SEL0 |= 0x80;
+	P7SEL1 &= ~0x80;      					 // configure P7.7 as TA1CCP1
+	P7DIR &= ~0x80;									 // make P7.7 in
+	
   TA1CTL &= ~0x0030;               // halt Timer A0
   // bits15-10=XXXXXX, reserved
   // bits9-8=10,       clock source to SMCLK
@@ -131,10 +138,11 @@ void TimerCapture1_Init(void (*task) (uint16_t time)) {
   // bit1=X,           capture overflow status
   // bit0=0,           clear capture/compare interrupt pending
   TA1CCTL0 = 0x4910;
+	TA1CCTL1 = 0x4910;
   TA1EX0 &= ~0x0007;       // configure for input clock divider /1
   NVIC_IPR2 = (NVIC_IPR2&0xFFFFFF00)|0x00000040; // priority 2
 // interrupts enabled in the main program after all devices initialized
-  //NVIC_ISER0 = 0x00000400; // enable interrupt 10 in NVIC
+  NVIC_ISER0 = 0x00000c00; // enable interrupt 10 and 11 in NVIC
   TA1CTL |= 0x0024;        // reset and start Timer A0 in continuous up mode
   // bits15-10=XXXXXX, reserved
   // bits9-8=10,       clock source to SMCLK
@@ -151,10 +159,15 @@ void TA1_0_IRQHandler(void){
   TA1CCTL0 &= ~0x0001;             // acknowledge capture/compare interrupt 0
   (*CaptureTask)(TA1CCR0);         // execute user task
 }
+
+void TA1_N_IRQHandler(void) {
+	TA1CCTL1 &= ~0x0001;
+	(*CaptureTask2)(TA1CCR1);
+}
 	
 	//------------TimerCapture_Init------------
-// Initialize Timer A1 in edge time mode to request interrupts on
-// the rising edge of P8.0 (TA1CCP0).  The interrupt service routine
+// Initialize Timer A2 in edge time mode to request interrupts on
+// the rising edge of P8.1 (TA1CCP0).  The interrupt service routine
 // acknowledges the interrupt and calls a user function.
 // Input: task is a pointer to a user function called when edge occurs
 //             parameter is 16-bit up-counting timer value when edge occurred
@@ -162,7 +175,7 @@ void TA1_0_IRQHandler(void){
 void TimerCapture2_Init(void (*task) (uint16_t time)) {
 	long sr;
   sr = StartCritical();
-  CaptureTask = task;              // user function
+  CaptureTask2 = task;              // user function
   // initialize P7.3 and make it input (P7.3 TA0CCP0)
   P8SEL0 |= 0x02;
   P8SEL1 &= ~0x02;                 // configure P8.0 as TA1CCP0

@@ -69,33 +69,27 @@ void left_period_measure(uint16_t time) {
   leftFirst = time;                    // setup for next
   leftDone = 1;
 	
-//	if (P2OUT & 0x02) 
-//	{
-//		count++;
-//		Nokia5110_Clear();
-//		Nokia5110_OutString("Ticks: ");
-//		Nokia5110_OutUDec(count);
-//		Nokia5110_OutString("            ");
-//		Nokia5110_OutString("Period");
-//		Nokia5110_OutUDec(leftPeriod);
-//	}
-}
-
-void right_period_measure(uint16_t time) {
-	P3OUT = P3OUT^0x02;              // toggle P2.1
-  rightPeriod = (time - rightFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
-  rightFirst = time;                    // setup for next
-  rightDone = 1;
-	
-	if (P2OUT & 0x02) 
+		if (P2OUT & 0x02) 
 	{
 		leftCount++;
 	}
 }
 
+void right_period_measure(uint16_t time) {
+	P3OUT = P3OUT^0x02;              // toggle P3.1
+  rightPeriod = (time - rightFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
+  rightFirst = time;                    // setup for next
+  rightDone = 1;
+	
+	if (P3OUT & 0x02) 
+	{
+		rightCount++;
+	}
+}
+
 int main(void){int i; uint16_t duty;
 	//SysTick_Init(10);
-	//Clock_Init48MHz();
+	Clock_Init48MHz();
   PWM_Init(15000,7500,7500); //while(1){};
   // Squarewave Period/4 (20ms)
   // P2.4 CCR1 75% PWM duty cycle, 10ms period
@@ -117,34 +111,42 @@ int main(void){int i; uint16_t duty;
 //  P2DIR |= 0x07;                   // make built-in RGB LEDs out
 //  P2OUT &= ~0x07;                  // RGB = off
 	
-	TimerCapture1_Init(&left_period_measure);
-	TimerCapture2_Init(&right_period_measure);
+	TimerCapture1_Init(&left_period_measure, &right_period_measure);
+	//TimerCapture2_Init(&right_period_measure);
 	EnableInterrupts();
 //	
-//	PWM_Duty1(10000);
-//	PWM_Duty2(10000);
+	PWM_Duty1(10000);
+	PWM_Duty2(10000);
   while (1){
 		int foo = 0;
 		WaitForInterrupt();
-    for (duty = 50; duty<15000; duty = duty+1000) {
-      PWM_Duty1(duty);
-      PWM_Duty2(duty);
-			
-			Nokia5110_Clear();
-			Nokia5110_OutString("LTicks:");
-			Nokia5110_OutUDec(leftCount);
-			Nokia5110_OutString("            ");
-			Nokia5110_OutString("RTicks:");
-			Nokia5110_OutUDec(rightCount);
-			//Nokia5110_OutString("Period ");
-			//Nokia5110_OutUDec(leftPeriod);
-			
-			// read encoders
-//			if (P4IN & 0x01) rightCount++;
-//			if (P4IN & 0x02) leftCount++;
-			
-      for (i = 1000000; i ;i--);
-    }
+		
+		Nokia5110_Clear();
+		Nokia5110_OutString("LPrd:  ");
+		Nokia5110_OutUDec(leftPeriod);
+		Nokia5110_OutString("            ");
+		Nokia5110_OutString("RPrd:  ");
+		Nokia5110_OutUDec(rightPeriod);
+		
+//    for (duty = 50; duty<15000; duty = duty+1000) {
+//      PWM_Duty1(duty);
+//      PWM_Duty2(duty);
+//			
+//			Nokia5110_Clear();
+//			Nokia5110_OutString("LPrd:  ");
+//			Nokia5110_OutUDec(leftPeriod);
+//			Nokia5110_OutString("            ");
+//			Nokia5110_OutString("RPrd:  ");
+//			Nokia5110_OutUDec(rightPeriod);
+//			//Nokia5110_OutString("Period ");
+//			//Nokia5110_OutUDec(leftPeriod);
+//			
+//			// read encoders
+////			if (P4IN & 0x01) rightCount++;
+////			if (P4IN & 0x02) leftCount++;
+//			
+//      for (i = 1000000; i ;i--);
+//    }
   }
 }
 
@@ -166,6 +168,9 @@ void period_measure_init() {
 	leftDone = 0;
 	rightFirst = 0;
 	rightDone = 0;
+	
+	leftPeriod = 0;
+	rightPeriod = 0;
 }
 
 void encoder_init() {
