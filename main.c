@@ -36,6 +36,8 @@
 
 #include "Nokia5110.h"
 
+#define DELTA_T 1
+
 void DisableInterrupts(void); // Disable interrupts
 void EnableInterrupts(void);  // Enable interrupts
 long StartCritical (void);    // previous I bit, disable interrupts
@@ -47,6 +49,29 @@ void encoder_init(void);
 void period_measure_init(void);
 void left_period_measure(uint16_t time);
 void right_period_measure(uint16_t time);
+uint16_t left_pid_controller(uint16_t y, uint16_t r);
+uint16_t right_pid_controller(uint16_t y, uint16_t r);
+void print_debug(void);
+
+// delay function for testing from sysctl.c
+// which delays 3*ulCount cycles
+#ifdef __TI_COMPILER_VERSION__
+  //Code Composer Studio Code
+  void Delay(uint32_t ulCount){
+  __asm (  "dloop:   subs    r0, #1\n"
+      "    bne     dloop\n");
+}
+
+#else
+  //Keil uVision Code
+  __asm void
+  Delay(uint32_t ulCount)
+  {
+    subs    r0, #1
+    bne     Delay
+    bx      lr
+  }
+#endif
 
 // 50Hz squarewave on P7.3
 // P2.4=1 when timer equals TA0CCR1 on way down, P2.4=0 when timer equals TA0CCR1 on way up
@@ -69,10 +94,10 @@ void left_period_measure(uint16_t time) {
   leftFirst = time;                    // setup for next
   leftDone = 1;
 	
-		if (P2OUT & 0x02) 
-	{
-		leftCount++;
-	}
+//	if (P2OUT & 0x02) 
+//	{
+//		leftCount++;
+//	}
 }
 
 void right_period_measure(uint16_t time) {
@@ -81,11 +106,13 @@ void right_period_measure(uint16_t time) {
   rightFirst = time;                    // setup for next
   rightDone = 1;
 	
-	if (P3OUT & 0x02) 
-	{
-		rightCount++;
-	}
+//	if (P3OUT & 0x02) 
+//	{
+//		rightCount++;
+//	}
 }
+
+
 
 int main(void){int i; uint16_t duty;
 	//SysTick_Init(10);
@@ -115,39 +142,57 @@ int main(void){int i; uint16_t duty;
 	//TimerCapture2_Init(&right_period_measure);
 	EnableInterrupts();
 //	
-	PWM_Duty1(10000);
-	PWM_Duty2(10000);
+//	PWM_Duty1(10000);
+//	PWM_Duty2(10000);
   while (1){
-		int foo = 0;
-		WaitForInterrupt();
+		PWM_Duty1(left_pid_controller(leftPeriod, 10000));
+		PWM_Duty2(right_pid_controller(rightPeriod,10000));
 		
-		Nokia5110_Clear();
-		Nokia5110_OutString("LPrd:  ");
-		Nokia5110_OutUDec(leftPeriod);
-		Nokia5110_OutString("            ");
-		Nokia5110_OutString("RPrd:  ");
-		Nokia5110_OutUDec(rightPeriod);
-		
-//    for (duty = 50; duty<15000; duty = duty+1000) {
-//      PWM_Duty1(duty);
-//      PWM_Duty2(duty);
-//			
-//			Nokia5110_Clear();
-//			Nokia5110_OutString("LPrd:  ");
-//			Nokia5110_OutUDec(leftPeriod);
-//			Nokia5110_OutString("            ");
-//			Nokia5110_OutString("RPrd:  ");
-//			Nokia5110_OutUDec(rightPeriod);
-//			//Nokia5110_OutString("Period ");
-//			//Nokia5110_OutUDec(leftPeriod);
-//			
-//			// read encoders
-////			if (P4IN & 0x01) rightCount++;
-////			if (P4IN & 0x02) leftCount++;
-//			
-//      for (i = 1000000; i ;i--);
-//    }
+		Delay(DELTA_T);
+		print_debug();
   }
+}
+
+void print_debug() {
+	Nokia5110_Clear();
+	Nokia5110_OutString("LPrd:  ");
+	Nokia5110_OutUDec(leftPeriod);
+	//Nokia5110_OutString("            ");
+	Nokia5110_OutString("RPrd:  ");
+	Nokia5110_OutUDec(rightPeriod);
+	
+	Nokia5110_OutString("            ");
+	
+	Nokia5110_OutString("LCnt:  ");
+	Nokia5110_OutUDec(leftCount);
+	Nokia5110_OutString("RCnt:  ");
+	Nokia5110_OutUDec(rightCount);
+}
+
+uint16_t right_e_old = 0;
+uint16_t right_E = 0;
+uint16_t right_pid_controller(uint16_t y, uint16_t r) {
+	uint16_t e = r - y;
+	uint16_t e_dot = (e - right_e_old) / DELTA_T;
+	
+	right_E += e;
+	uint16_t u = e + right_E + e_dot;
+	right_e_old = e;
+	
+	return u;
+}
+
+uint16_t left_e_old = 0;
+uint16_t left_E = 0;
+uint16_t left_pid_controller(uint16_t y, uint16_t r) {
+	uint16_t e = r - y;
+	uint16_t e_dot = (e - left_e_old) / DELTA_T;
+	
+	left_E += e;
+	uint16_t u = e + left_E + e_dot;
+	left_e_old = e;
+	
+	return u;
 }
 
 void logic_init() {
