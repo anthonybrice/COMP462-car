@@ -26,9 +26,13 @@
  http://users.ece.utexas.edu/~valvano/
  */
 
-#include <stdint.h>
-#include <stdlib.h>
+//#include <stdint.h>
+//#include <stdlib.h>
+#include <math.h>
+
+
 #include "msp432p401r.h"
+//#include "UART.h"
 #include "ClockSystem.h"
 #include "SysTickInts.h"
 #include "InputCapture.h"
@@ -36,7 +40,13 @@
 
 #include "Nokia5110.h"
 
+#define CALIBRATION	0
 #define DELTA_T 1
+
+#define SIZE 200
+uint16_t leftWheelBuf[SIZE];
+uint16_t rightWheelBuf[SIZE];
+uint32_t count = 0;
 
 void DisableInterrupts(void); // Disable interrupts
 void EnableInterrupts(void);  // Enable interrupts
@@ -52,6 +62,13 @@ void right_period_measure(uint16_t time);
 uint16_t left_pid_controller(uint16_t y, uint16_t r);
 uint16_t right_pid_controller(uint16_t y, uint16_t r);
 void print_debug(void);
+void save_feedback(uint16_t left, uint16_t right);
+
+void sonar1_init(void);
+void sonar2_init(void);
+double sonar1_measure(void);
+double sonar2_measure(void);
+double calculateDistance(uint32_t x);
 
 // delay function for testing from sysctl.c
 // which delays 3*ulCount cycles
@@ -87,6 +104,15 @@ uint16_t rightPeriod;
 uint16_t rightFirst;
 int rightDone;
 uint16_t rightCount = 0;
+	
+	
+// VELOCITY CONSTANT
+int v = 1.0;
+	
+const int D = 10; // desired distance from right wall during wall following
+const int R = 3; // wheel radius in cm
+const int L = 13; // wheel base in cm
+const int KPe = 1.0; // distance error constant
 
 void left_period_measure(uint16_t time) {
 	P2OUT = P2OUT^0x02;              // toggle P2.1
@@ -114,7 +140,7 @@ void right_period_measure(uint16_t time) {
 
 
 
-int main(void){int i; uint16_t duty;
+int main(void) {
 	//SysTick_Init(10);
 	Clock_Init48MHz();
   PWM_Init(15000,7500,7500); //while(1){};
@@ -145,12 +171,45 @@ int main(void){int i; uint16_t duty;
 //	PWM_Duty1(10000);
 //	PWM_Duty2(10000);
   while (1){
-		PWM_Duty1(left_pid_controller(leftPeriod, 10000));
-		PWM_Duty2(right_pid_controller(rightPeriod,10000));
+
+		uint16_t left_u = left_pid_controller(leftPeriod, 10000);
+		uint16_t right_u = right_pid_controller(rightPeriod,10000);
+		save_feedback(left_u, right_u);
+		
+		
+		// TODO
+		// pingValue = ping(right_sensor)
+		
+		// pingValCentimeters = microsecondsToCentimeters(pingValue);
+		
+		// error_d = D - pingValCentimeters;
+		
+		
+		// w = KPe * error_d
+		
+		// DESIRED VELOCITIES
+		// vr = (2v + wL) / 2R
+		// vl = (2v - wL) / 2R
+		
+		//
+		
+		PWM_Duty1(left_u);
+		PWM_Duty2(right_u);
 		
 		Delay(DELTA_T);
-		print_debug();
+		//print_debug();
+		
+		if (count == SIZE) break;
   }
+	
+//	for (int i = 0; i < SIZE; i++) {
+//		printf("%d,", leftWheelBuf[i]);
+//	}
+//	printf("\n");
+//	for (int i = 0; i < SIZE; i++) {
+//		printf("%d, ", rightWheelBuf[i]);
+//	}
+//	printf("\n");
 }
 
 void print_debug() {
@@ -227,8 +286,101 @@ void encoder_init() {
 	P4DIR &= ~0x03;
 }
 
+void save_feedback(uint16_t left, uint16_t right) {
+	if (count < SIZE) {
+		leftWheelBuf[count] = left;
+		rightWheelBuf[count] = right;
+		count++;
+	}
+}
 
+long microsecondsToInches(long microseconds) {
+  // According to Parallax's datasheet for the PING))), there are
+  // 73.746 microseconds per inch (i.e. sound travels at 1130 feet per
+  // second).  This gives the distance travelled by the ping, outbound
+  // and return, so we divide by 2 to get the distance of the obstacle.
+  // See: http://www.parallax.com/dl/docs/prod/acc/28015-PING-v1.3.pdf
+  return microseconds / 74 / 2;
+}
 
+long microsecondsToCentimeters(long microseconds) {
+  // The speed of sound is 340 m/s or 29 microseconds per centimeter.
+  // The ping travels out and back, so to find the distance of the
+  // object we take half of the distance travelled.
+  return microseconds / 29 / 2;
+}
+
+void sonar1_init(void) {
+	P5SEL0 &= ~0x40;
+	P5SEL1 &= ~0x40;
+	P5DIR |= 0x40;
+	P5OUT |= 0x40; // make P5.6 out and initially high
+	
+	// TODO init input line
+	
+	TA2CTL &= ~0x0030;
+	TA2CTL = 0x0200;
+	TA2EX0 &= ~0x0007;
+}
+
+void sonar2_init(void) {
+	P10SEL0 &= ~0x10;
+	P10SEL1 &= ~0x10;
+	P10DIR |= 0x10;
+	P10OUT |= 0x10;  // make P10.4 out and initially high
+
+	// TODO init input line
+	
+	TA3CTL &= ~0x0030;
+	TA3CTL = 0x0200;
+	TA3EX0 &= ~0x0007;
+}
+
+double calculateDistance(uint32_t x) {
+	double ns = x * pow(10, -9);
+	
+	return (340 * ns) * 50;
+}
+
+double sonar1_measure(void) {
+	uint16_t rising;
+	TA2CTL &= ~0x0030;
+	TA2CCTL1 = 0x4900;
+	TA2CTL |= 0x0024;
+	P2OUT |= 0x10;  // reset P2.4 HIGH
+	Delay(55);
+	P2OUT &= ~0x10; 	// P2.4 LOW
+	while ((TA2CCTL1 & 0x0001) == 0);
+	rising = TA2CCR1;
+	TA2CCTL1 = 0x8900;
+	while ((TA2CCTL1 & 0x0001) == 0);
+	
+	uint32_t bar = TA2CCR1 - rising - CALIBRATION;
+	double baz = calculateDistance(bar);
+	double box = baz;
+	
+	return baz;
+}
+
+double sonar2_measure(void) {
+	uint16_t rising;
+	TA3CTL &= ~0x0030;
+	TA3CCTL0 = 0x4900;
+	TA3CTL |= 0x0024;
+	P2OUT |= 0x10;  // reset P2.4 HIGH
+	Delay(55);
+	P2OUT &= ~0x10; 	// P2.4 LOW
+	while ((TA3CCTL0 & 0x0001) == 0);
+	rising = TA3CCR0;
+	TA3CCTL0 = 0x8900;
+	while ((TA3CCTL0 & 0x0001) == 0);
+	
+	uint32_t bar = TA3CCR0 - rising - CALIBRATION;
+	double baz = calculateDistance(bar);
+	double box = baz;
+	
+	return baz;
+}
 
 
 
