@@ -29,7 +29,7 @@
 //#include <stdint.h>
 //#include <stdlib.h>
 #include <math.h>
-
+#include <stdio.h>
 
 #include "msp432p401r.h"
 //#include "UART.h"
@@ -41,11 +41,11 @@
 #include "Nokia5110.h"
 
 #define CALIBRATION	0
-#define DELTA_T 1
+#define DELTA_T 100
 
-#define SIZE 200
-uint16_t leftWheelBuf[SIZE];
-uint16_t rightWheelBuf[SIZE];
+//#define SIZE 200
+//uint16_t leftWheelBuf[SIZE];
+//uint16_t rightWheelBuf[SIZE];
 uint32_t count = 0;
 
 void DisableInterrupts(void); // Disable interrupts
@@ -69,6 +69,10 @@ void sonar2_init(void);
 double sonar1_measure(void);
 double sonar2_measure(void);
 double calculateDistance(uint32_t x);
+void print_sonars(double son1, double son2);
+void print_udecs(uint32_t ns1, uint32_t ns2);
+double average(double* arr, uint16_t length);
+uint16_t scale(uint16_t period);
 
 // delay function for testing from sysctl.c
 // which delays 3*ulCount cycles
@@ -138,7 +142,8 @@ void right_period_measure(uint16_t time) {
 //	}
 }
 
-
+uint32_t ns1 = 0;
+uint32_t ns2 = 0;
 
 int main(void) {
 	//SysTick_Init(10);
@@ -155,8 +160,10 @@ int main(void) {
 	Nokia5110_Init();
 	logic_init();
 	encoder_init();
+	sonar1_init();
+	sonar2_init();
 //	
-//	period_measure_init();
+	period_measure_init();
 //	
 //	P2SEL0 &= ~0x07;
 //  P2SEL1 &= ~0x07;                 // configure built-in RGB LEDs as GPIO
@@ -170,12 +177,20 @@ int main(void) {
 //	
 //	PWM_Duty1(10000);
 //	PWM_Duty2(10000);
-  while (1){
 
-		uint16_t left_u = left_pid_controller(leftPeriod, 10000);
-		uint16_t right_u = right_pid_controller(rightPeriod,10000);
-		save_feedback(left_u, right_u);
+	int counter = 0;
+
+  while (1){
 		
+		uint16_t foo = scale(leftPeriod);
+		uint16_t bar = scale(rightPeriod);
+
+		uint32_t left_u = left_pid_controller(foo, 7500);
+		uint32_t right_u = right_pid_controller(bar, 7500);
+		if (++counter == 20) {
+			print_udecs(foo, bar);
+			counter = 0;
+		}
 		
 		// TODO
 		// pingValue = ping(right_sensor)
@@ -192,14 +207,26 @@ int main(void) {
 		// vl = (2v - wL) / 2R
 		
 		//
-		
+//		
 		PWM_Duty1(left_u);
 		PWM_Duty2(right_u);
+
+
+		double sonar1 = 0.0;
+		double sonar2 = 0.0;
+		double sonar1s[10];
+		double sonar2s[10];
+		for (int i = 0; i < 10; i++) {
+			sonar1s[i] = sonar1_measure();
+			sonar2s[i] = sonar2_measure();
+		}
+		
+		sonar1 = average(sonar1s, 10);
+		sonar2 = average(sonar2s, 10);
+		
+		//print_sonars(sonar1, sonar2);
 		
 		Delay(DELTA_T);
-		//print_debug();
-		
-		if (count == SIZE) break;
   }
 	
 //	for (int i = 0; i < SIZE; i++) {
@@ -210,6 +237,51 @@ int main(void) {
 //		printf("%d, ", rightWheelBuf[i]);
 //	}
 //	printf("\n");
+}
+
+uint16_t scale(uint16_t period) {
+	return (15000 * ((uint32_t) period)) / 65535;
+}
+
+double average(double* arr, uint16_t length) {
+	double sum = 0.0;
+	for (int i = 0; i < length; i++) {
+		if (arr[i] != -1.0) {
+			sum += arr[i];
+		} else {
+			return -1.0;
+		}
+	}
+	
+	return sum / length;
+}
+
+void print_sonars(double son1, double son2) {
+	char str1[80];
+	char str2[80];
+	
+	sprintf(str1, "%f", son1);
+	sprintf(str2, "%f", son2);
+	str1[9] = '\0';
+	str2[9] = '\0';
+	
+	Nokia5110_Clear();
+	Nokia5110_OutString("Son1:           ");
+	Nokia5110_OutString(str1);
+	Nokia5110_OutString("            ");
+	Nokia5110_OutString("Son2:           ");
+	Nokia5110_OutString(str2);
+	Nokia5110_OutString("            ");
+}
+
+void print_udecs(uint32_t ns1, uint32_t ns2) {
+	Nokia5110_Clear();
+	Nokia5110_OutString("Ude1:           ");
+	Nokia5110_OutUDec(ns1);
+	Nokia5110_OutString("            ");
+	Nokia5110_OutString("Ude2:           ");
+	Nokia5110_OutUDec(ns2);
+	Nokia5110_OutString("            ");
 }
 
 void print_debug() {
@@ -229,26 +301,28 @@ void print_debug() {
 }
 
 uint16_t right_e_old = 0;
-uint16_t right_E = 0;
+uint32_t right_E = 0;
 uint16_t right_pid_controller(uint16_t y, uint16_t r) {
 	uint16_t e = r - y;
 	uint16_t e_dot = (e - right_e_old) / DELTA_T;
 	
-	right_E += e;
-	uint16_t u = e + right_E + e_dot;
+	if (right_E + e < 32767) right_E += e;
+//	right_E += e;
+	uint16_t u = e + right_E + 10 * e_dot;
 	right_e_old = e;
 	
 	return u;
 }
 
 uint16_t left_e_old = 0;
-uint16_t left_E = 0;
+uint32_t left_E = 0;
 uint16_t left_pid_controller(uint16_t y, uint16_t r) {
 	uint16_t e = r - y;
 	uint16_t e_dot = (e - left_e_old) / DELTA_T;
 	
-	left_E += e;
-	uint16_t u = e + left_E + e_dot;
+	if (left_E + e < 32767) left_E += e;
+//	left_E += e;
+	uint16_t u = e + left_E + 10 * e_dot;
 	left_e_old = e;
 	
 	return u;
@@ -286,100 +360,89 @@ void encoder_init() {
 	P4DIR &= ~0x03;
 }
 
-void save_feedback(uint16_t left, uint16_t right) {
-	if (count < SIZE) {
-		leftWheelBuf[count] = left;
-		rightWheelBuf[count] = right;
-		count++;
-	}
-}
+void sonar1_init(void) { // right
+	// make P4.0 out and initially high
+	P4SEL0 &= ~0x01;
+	P4SEL1 &= ~0x01;
+	P4DIR |= 0x01;
+	P4OUT |= 0x01;
 
-long microsecondsToInches(long microseconds) {
-  // According to Parallax's datasheet for the PING))), there are
-  // 73.746 microseconds per inch (i.e. sound travels at 1130 feet per
-  // second).  This gives the distance travelled by the ping, outbound
-  // and return, so we divide by 2 to get the distance of the obstacle.
-  // See: http://www.parallax.com/dl/docs/prod/acc/28015-PING-v1.3.pdf
-  return microseconds / 74 / 2;
-}
-
-long microsecondsToCentimeters(long microseconds) {
-  // The speed of sound is 340 m/s or 29 microseconds per centimeter.
-  // The ping travels out and back, so to find the distance of the
-  // object we take half of the distance travelled.
-  return microseconds / 29 / 2;
-}
-
-void sonar1_init(void) {
-	P5SEL0 &= ~0x40;
+	// configure P5.6 as TA2CCP1
+	P5SEL0 |= 0x40;
 	P5SEL1 &= ~0x40;
-	P5DIR |= 0x40;
-	P5OUT |= 0x40; // make P5.6 out and initially high
-	
-	// TODO init input line
+	P5DIR &= ~0x40;
 	
 	TA2CTL &= ~0x0030;
-	TA2CTL = 0x0200;
+	TA2CTL = 0x0280;
 	TA2EX0 &= ~0x0007;
 }
 
-void sonar2_init(void) {
-	P10SEL0 &= ~0x10;
-	P10SEL1 &= ~0x10;
-	P10DIR |= 0x10;
-	P10OUT |= 0x10;  // make P10.4 out and initially high
+void sonar2_init(void) {	// front
+	// make P4.1 out and initially high
+	P4SEL0 &= ~0x02;
+	P4SEL1 &= ~0x02;
+	P4DIR |= 0x02;
+	P4OUT |= 0x02;
 
-	// TODO init input line
+	// configure P10.4 as TA3CCP0
+	P10SEL0 |= 0x10;
+	P10SEL1 &= ~0x10;
+	P10DIR &= ~0x10;
 	
 	TA3CTL &= ~0x0030;
-	TA3CTL = 0x0200;
+	TA3CTL = 0x0280;
 	TA3EX0 &= ~0x0007;
 }
 
 double calculateDistance(uint32_t x) {
 	double ns = x * pow(10, -9);
 	
-	return (340 * ns) * 50;
+	return (340 * ns) * 200;
 }
 
 double sonar1_measure(void) {
-	uint16_t rising;
+	uint32_t rising;
 	TA2CTL &= ~0x0030;
+	
 	TA2CCTL1 = 0x4900;
 	TA2CTL |= 0x0024;
-	P2OUT |= 0x10;  // reset P2.4 HIGH
+	P4OUT &= ~0x01;  // reset P4.0 low
 	Delay(55);
-	P2OUT &= ~0x10; 	// P2.4 LOW
+	P4OUT |= 0x01; 	// P4.0 high
 	while ((TA2CCTL1 & 0x0001) == 0);
 	rising = TA2CCR1;
 	TA2CCTL1 = 0x8900;
-	while ((TA2CCTL1 & 0x0001) == 0);
+	while ((TA2CCTL1 & 0x0001) == 0) {
+		if ((TA2CCR1 - rising) >= 32768) return -1.0;
+	}
 	
-	uint32_t bar = TA2CCR1 - rising - CALIBRATION;
-	double baz = calculateDistance(bar);
-	double box = baz;
+	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
+	ns1 = ns;
+	double dist = calculateDistance(ns);
 	
-	return baz;
+	return dist;
 }
 
 double sonar2_measure(void) {
-	uint16_t rising;
+	uint32_t rising;
 	TA3CTL &= ~0x0030;
 	TA3CCTL0 = 0x4900;
 	TA3CTL |= 0x0024;
-	P2OUT |= 0x10;  // reset P2.4 HIGH
+	P4OUT &= ~0x02;  // reset P4.1 low
 	Delay(55);
-	P2OUT &= ~0x10; 	// P2.4 LOW
+	P4OUT |= 0x02; 	// P4.1 high
 	while ((TA3CCTL0 & 0x0001) == 0);
 	rising = TA3CCR0;
 	TA3CCTL0 = 0x8900;
-	while ((TA3CCTL0 & 0x0001) == 0);
+	while ((TA3CCTL0 & 0x0001) == 0) {
+		if ((TA2CCR1 - rising) >= 32768) return -1.0;
+	}
 	
-	uint32_t bar = TA3CCR0 - rising - CALIBRATION;
-	double baz = calculateDistance(bar);
-	double box = baz;
+	uint32_t ns = TA3CCR0 - rising - CALIBRATION;
+	ns2 = ns;
+	double dist = calculateDistance(ns);
 	
-	return baz;
+	return dist;
 }
 
 

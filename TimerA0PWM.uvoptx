@@ -167,7 +167,24 @@
           <Name>UL2CM3(-S0 -C0 -P0 -FD01000000 -FCE000 -FN2 -FF0MSP432P4xx_MainFlash256kB -FS00 -FL040000 -FF1MSP432P4xx_InfoFlash -FS1200000 -FL14000 -FP0($$Device:MSP432P401R$Flash\MSP432P4xx_MainFlash256kB.FLM) -FP1($$Device:MSP432P401R$Flash\MSP432P4xx_InfoFlash.FLM))</Name>
         </SetRegEntry>
       </TargetDriverDllRegistry>
-      <Breakpoint/>
+      <Breakpoint>
+        <Bp>
+          <Number>0</Number>
+          <Type>0</Type>
+          <LineNumber>389</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>6350</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\main.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\PWM\main.c\389</Expression>
+        </Bp>
+      </Breakpoint>
       <WatchWindow1>
         <Ww>
           <count>0</count>
@@ -193,6 +210,16 @@
           <count>4</count>
           <WinNumber>1</WinNumber>
           <ItemText>\\PWM\main.c\leftWheelBuf</ItemText>
+        </Ww>
+        <Ww>
+          <count>5</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\PWM\main.c\main\sonar1</ItemText>
+        </Ww>
+        <Ww>
+          <count>6</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>\\PWM\main.c\main\sonar2</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -333,7 +360,7 @@
       <GroupNumber>1</GroupNumber>
       <FileNumber>7</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
       <PathWithFileName>.\Nokia5110.c</PathWithFileName>

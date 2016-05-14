@@ -99,7 +99,7 @@ void Nokia5110_OutChar(char data);
 // Inputs: ptr  pointer to NULL-terminated ASCII string
 // Outputs: none
 // Assumes: LCD is in default horizontal addressing mode (V = 0)
-void Nokia5110_OutString(char *ptr);
+void Nokia5110_OutString(char *ptr); 
 
 //********Nokia5110_OutUDec*****************
 // Output a 16-bit number in unsigned decimal format with a

@@ -1,4 +1,6 @@
 .\objects\main.o: main.c
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
+.\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\main.o: C:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\Device\Include\msp432p401r.h
 .\objects\main.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\main.o: C:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\Device\Include\msp_compatibility.h
