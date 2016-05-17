@@ -34,12 +34,14 @@ InputCapture.h(37): warning:  #1-D: last line of file ends without a newline
   void TimerCapture2_Init(void(*task)(uint16_t time));
 Nokia5110.h(204): warning:  #1-D: last line of file ends without a newline
   void Output_Color(uint32_t newColor);
-main.c(384): warning:  #177-D: variable "count" was declared but never referenced
+main.c(185): warning:  #177-D: variable "car" was declared but never referenced
+  	Car car = { .velocity = V_DESIRED, .heading = 0.0 };
+main.c(435): warning:  #177-D: variable "count" was declared but never referenced
   	static uint32_t count = 0;
-main.c: 4 warnings, 0 errors
+main.c: 5 warnings, 0 errors
 linking...
-Program Size: Code=14224 RO-data=1168 RW-data=72 ZI-data=1120  
-".\Objects\PWM.axf" - 0 Error(s), 4 Warning(s).
+Program Size: Code=14908 RO-data=1180 RW-data=96 ZI-data=1280  
+".\Objects\PWM.axf" - 0 Error(s), 5 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -69,7 +71,7 @@ Package Vendor: TexasInstruments
       Source file:   Device\Source\system_msp432.c
       Source file:   Templates\main.c
       Source file:   Templates\blinkLED.c
-Build Time Elapsed:  00:00:02
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

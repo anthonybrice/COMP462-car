@@ -40,8 +40,11 @@
 
 #include "Nokia5110.h"
 
+#define TRUE (!FALSE)
+#define FALSE (0)
+
 #define CALIBRATION	0
-#define DELTA_T 60000
+#define DELTA_T 10000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
@@ -49,7 +52,18 @@
 #define K_I 0
 #define K_D 0
 
+#define K_PB1 0.5
+#define K_PB2 1
+#define K_DB 1.25
+#define K_IB 0
+
+#define V_DESIRED 7500
 #define TURN_CALBR 7500
+
+
+#define R 3.0
+#define L 13.0
+
 
 //#define SIZE 200
 //uint16_t leftWheelBuf[SIZE];
@@ -77,10 +91,13 @@ void sonar2_init(void);
 double sonar1_measure(void);
 double sonar2_measure(void);
 double calculateDistance(uint32_t x);
-void print_sonars(double son1, double son2);
+void print_sonars(double son1, double son2, int32_t vld, int32_t vrd);
 void print_udecs(uint32_t ns1, uint32_t ns2);
 void print_strings(char* ns1, char* ns2);
 double average(double* arr, uint16_t length);
+double average_front(double x);
+double average_right(double x);
+double pid_controller(double y, double r);
 uint16_t scale(uint16_t period);
 
 // delay function for testing from sysctl.c
@@ -102,6 +119,13 @@ uint16_t scale(uint16_t period);
     bx      lr
   }
 #endif
+	
+typedef struct _Car Car;
+	
+struct _Car {
+	uint16_t velocity;
+	double heading;
+};
 
 // 50Hz squarewave on P7.3
 // P2.4=1 when timer equals TA0CCR1 on way down, P2.4=0 when timer equals TA0CCR1 on way up
@@ -119,23 +143,12 @@ int rightDone;
 uint16_t rightCount = 0;
 	
 	
-// VELOCITY CONSTANT
-int v = 1.0;
-	
-const int D = 10; // desired distance from right wall during wall following
-const int R = 3; // wheel radius in cm
-const int L = 13; // wheel base in cm
 
 void left_period_measure(uint16_t time) {
 	P2OUT = P2OUT^0x02;              // toggle P2.1
   leftPeriod = (time - leftFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
   leftFirst = time;                    // setup for next
   leftDone = 1;
-	
-//	if (P2OUT & 0x02) 
-//	{
-//		leftCount++;
-//	}
 }
 
 void right_period_measure(uint16_t time) {
@@ -143,11 +156,6 @@ void right_period_measure(uint16_t time) {
   rightPeriod = (time - rightFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
   rightFirst = time;                    // setup for next
   rightDone = 1;
-	
-//	if (P3OUT & 0x02) 
-//	{
-//		rightCount++;
-//	}
 }
 
 uint32_t ns1 = 0;
@@ -176,34 +184,29 @@ int main(void) {
 	
 	TimerCapture1_Init(&left_period_measure, &right_period_measure);
 	EnableInterrupts();
+	
+	Car car = { .velocity = V_DESIRED, .heading = 0.0 };
 
-  while (1){
+  while (TRUE) {
 		
-		double sonar1 = 0.0;
-		double sonar2 = 0.0;
-		double sonar1s[10];
-		double sonar2s[10];
-		for (int i = 0; i < 10; i++) {
-			sonar1s[i] = sonar1_measure();
-			sonar2s[i] = sonar2_measure();
-		}
+		double sonar1 = average_right(sonar1_measure());
+		double sonar2 = average_front(sonar2_measure());
 		
-		sonar1 = average(sonar1s, 10);
-		sonar2 = average(sonar2s, 10);
+		if (sonar1 == -1.0) continue;
 		
 		// get error from distance desired
 		double dd = 0.5;
-		double ed = dd - sonar1;
 		
-		print_sonars(sonar1, sonar2);
+		double ed = pid_controller(sonar1, dd);
 		
-		// update pwm speed based upon distance error
-		int32_t vld = CLAMP(7500 - ed * TURN_CALBR, 3000, 12000);
-		int32_t vrd = CLAMP(7500 + ed * TURN_CALBR, 3000, 12000);
+		int32_t vld = V_DESIRED - ed * TURN_CALBR;
+		int32_t vrd = V_DESIRED + ed * TURN_CALBR;
 		
+		print_sonars(sonar1, sonar2, vld, vrd);
+				
 		uint16_t lm = scale(leftPeriod);
 		uint16_t rm = scale(rightPeriod);
-		
+				
 		int32_t left_u = left_pid_controller(lm, vld);
 		int32_t right_u = right_pid_controller(rm, vrd);
 		
@@ -220,15 +223,56 @@ uint16_t scale(uint16_t period) {
 
 double average(double* arr, uint16_t length) {
 	double sum = 0.0;
+	int divisor = length;
 	for (int i = 0; i < length; i++) {
 		if (arr[i] != -1.0) {
+			if (arr[i] == 0.0) divisor--;
 			sum += arr[i];
 		} else {
 			return -1.0;
 		}
 	}
 	
-	return sum / length;
+	return sum / divisor;
+}
+
+#define AVG_LENGTH 10
+
+double average_right(double x) {
+	static int i = 0;
+	static double sonars[AVG_LENGTH] = { 0.0 };
+	
+	sonars[i++] = x;
+	if (i == AVG_LENGTH) i = 0;
+	
+	return average(sonars, AVG_LENGTH);
+}
+
+double average_front(double x) {
+	static int i = 0;
+	static double sonars[AVG_LENGTH] = { 0.0 };
+	
+	sonars[i++] = x;
+	if (i == AVG_LENGTH) i = 0;
+	
+	return average(sonars, AVG_LENGTH);
+}
+
+double pid_controller(double y, double r) {
+	static double e_old = 0.0;
+	static double E = 0.0;
+	
+	double e = r - y;
+	double e_dot = (e - e_old) / DELTA_T;
+	
+	double k = e < 0 ? K_PB1 : K_PB2;
+	
+	E = CLAMP(E + e, -1, 1);
+	
+	double u = k * e + K_IB * E + K_DB * e_dot;
+	e_old = e;
+	
+	return u;
 }
 
 int32_t right_pid_controller(uint16_t y, uint16_t r) {
@@ -380,22 +424,26 @@ double sonar2_measure(void) {
 
 
 // ********* PRINTING METHODS ***************
-void print_sonars(double son1, double son2) {
+void print_sonars(double son1, double son2, int32_t vld, int32_t vrd) {
 	static uint32_t count = 0;
 	char str1[80];
 	char str2[80];
 	
 	sprintf(str1, "%f", son1);
 	sprintf(str2, "%f", son2);
-	str1[9] = '\0';
-	str2[9] = '\0';
+	str1[6] = '\0';
+	str2[6] = '\0';
 	
 	Nokia5110_Clear();
-	Nokia5110_OutString("Son1:           ");
+	Nokia5110_OutString("Son1: ");
 	Nokia5110_OutString(str1);
-	Nokia5110_OutString("            ");
-	Nokia5110_OutString("Son2:           ");
+//	Nokia5110_OutString("            ");
+	Nokia5110_OutString("Son2: ");
 	Nokia5110_OutString(str2);
+	Nokia5110_OutString("vld:   ");
+	Nokia5110_OutUDec(vld);
+	Nokia5110_OutString("vrd:   ");
+	Nokia5110_OutUDec(vrd);
 //	Nokia5110_OutString("Cnt: ");
 //	Nokia5110_OutUDec(count++);
 }
