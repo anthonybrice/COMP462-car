@@ -41,7 +41,15 @@
 #include "Nokia5110.h"
 
 #define CALIBRATION	0
-#define DELTA_T 100
+#define DELTA_T 60000
+
+#define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+
+#define K_P 1
+#define K_I 0
+#define K_D 0
+
+#define TURN_CALBR 7500
 
 //#define SIZE 200
 //uint16_t leftWheelBuf[SIZE];
@@ -59,8 +67,8 @@ void encoder_init(void);
 void period_measure_init(void);
 void left_period_measure(uint16_t time);
 void right_period_measure(uint16_t time);
-uint16_t left_pid_controller(uint16_t y, uint16_t r);
-uint16_t right_pid_controller(uint16_t y, uint16_t r);
+int32_t left_pid_controller(uint16_t y, uint16_t r);
+int32_t right_pid_controller(uint16_t y, uint16_t r);
 void print_debug(void);
 void save_feedback(uint16_t left, uint16_t right);
 
@@ -71,6 +79,7 @@ double sonar2_measure(void);
 double calculateDistance(uint32_t x);
 void print_sonars(double son1, double son2);
 void print_udecs(uint32_t ns1, uint32_t ns2);
+void print_strings(char* ns1, char* ns2);
 double average(double* arr, uint16_t length);
 uint16_t scale(uint16_t period);
 
@@ -116,7 +125,6 @@ int v = 1.0;
 const int D = 10; // desired distance from right wall during wall following
 const int R = 3; // wheel radius in cm
 const int L = 13; // wheel base in cm
-const int KPe = 1.0; // distance error constant
 
 void left_period_measure(uint16_t time) {
 	P2OUT = P2OUT^0x02;              // toggle P2.1
@@ -148,7 +156,7 @@ uint32_t ns2 = 0;
 int main(void) {
 	//SysTick_Init(10);
 	Clock_Init48MHz();
-  PWM_Init(15000,7500,7500); //while(1){};
+  PWM_Init(15000,0,0); //while(1){};
   // Squarewave Period/4 (20ms)
   // P2.4 CCR1 75% PWM duty cycle, 10ms period
   // P2.5 CCR2 25% PWM duty cycle, 10ms period
@@ -158,60 +166,19 @@ int main(void) {
   // P2.5 CCR2 33% PWM duty cycle, 10us period
 	
 	Nokia5110_Init();
+	Nokia5110_Clear();
 	logic_init();
 	encoder_init();
 	sonar1_init();
 	sonar2_init();
-//	
+
 	period_measure_init();
-//	
-//	P2SEL0 &= ~0x07;
-//  P2SEL1 &= ~0x07;                 // configure built-in RGB LEDs as GPIO
-//  P2DS |= 0x07;                    // make built-in RGB LEDs high drive strength
-//  P2DIR |= 0x07;                   // make built-in RGB LEDs out
-//  P2OUT &= ~0x07;                  // RGB = off
 	
 	TimerCapture1_Init(&left_period_measure, &right_period_measure);
-	//TimerCapture2_Init(&right_period_measure);
 	EnableInterrupts();
-//	
-//	PWM_Duty1(10000);
-//	PWM_Duty2(10000);
-
-	int counter = 0;
 
   while (1){
 		
-		uint16_t foo = scale(leftPeriod);
-		uint16_t bar = scale(rightPeriod);
-
-		uint32_t left_u = left_pid_controller(foo, 7500);
-		uint32_t right_u = right_pid_controller(bar, 7500);
-		if (++counter == 20) {
-			print_udecs(foo, bar);
-			counter = 0;
-		}
-		
-		// TODO
-		// pingValue = ping(right_sensor)
-		
-		// pingValCentimeters = microsecondsToCentimeters(pingValue);
-		
-		// error_d = D - pingValCentimeters;
-		
-		
-		// w = KPe * error_d
-		
-		// DESIRED VELOCITIES
-		// vr = (2v + wL) / 2R
-		// vl = (2v - wL) / 2R
-		
-		//
-//		
-		PWM_Duty1(left_u);
-		PWM_Duty2(right_u);
-
-
 		double sonar1 = 0.0;
 		double sonar2 = 0.0;
 		double sonar1s[10];
@@ -224,19 +191,27 @@ int main(void) {
 		sonar1 = average(sonar1s, 10);
 		sonar2 = average(sonar2s, 10);
 		
-		//print_sonars(sonar1, sonar2);
+		// get error from distance desired
+		double dd = 0.5;
+		double ed = dd - sonar1;
+		
+		print_sonars(sonar1, sonar2);
+		
+		// update pwm speed based upon distance error
+		int32_t vld = CLAMP(7500 - ed * TURN_CALBR, 3000, 12000);
+		int32_t vrd = CLAMP(7500 + ed * TURN_CALBR, 3000, 12000);
+		
+		uint16_t lm = scale(leftPeriod);
+		uint16_t rm = scale(rightPeriod);
+		
+		int32_t left_u = left_pid_controller(lm, vld);
+		int32_t right_u = right_pid_controller(rm, vrd);
+		
+		PWM_Duty1(CLAMP((int32_t) rm + right_u, 0, 14999)); // right
+		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left
 		
 		Delay(DELTA_T);
   }
-	
-//	for (int i = 0; i < SIZE; i++) {
-//		printf("%d,", leftWheelBuf[i]);
-//	}
-//	printf("\n");
-//	for (int i = 0; i < SIZE; i++) {
-//		printf("%d, ", rightWheelBuf[i]);
-//	}
-//	printf("\n");
 }
 
 uint16_t scale(uint16_t period) {
@@ -256,74 +231,32 @@ double average(double* arr, uint16_t length) {
 	return sum / length;
 }
 
-void print_sonars(double son1, double son2) {
-	char str1[80];
-	char str2[80];
+int32_t right_pid_controller(uint16_t y, uint16_t r) {
+	static int32_t e_old = 0;
+	static int32_t E = 0;
 	
-	sprintf(str1, "%f", son1);
-	sprintf(str2, "%f", son2);
-	str1[9] = '\0';
-	str2[9] = '\0';
+	int32_t e = (int32_t) r - (int32_t) y;
+	int32_t e_dot = (e - e_old) / DELTA_T;
 	
-	Nokia5110_Clear();
-	Nokia5110_OutString("Son1:           ");
-	Nokia5110_OutString(str1);
-	Nokia5110_OutString("            ");
-	Nokia5110_OutString("Son2:           ");
-	Nokia5110_OutString(str2);
-	Nokia5110_OutString("            ");
-}
+	E = CLAMP(E + e, 0, 1000);
 
-void print_udecs(uint32_t ns1, uint32_t ns2) {
-	Nokia5110_Clear();
-	Nokia5110_OutString("Ude1:           ");
-	Nokia5110_OutUDec(ns1);
-	Nokia5110_OutString("            ");
-	Nokia5110_OutString("Ude2:           ");
-	Nokia5110_OutUDec(ns2);
-	Nokia5110_OutString("            ");
-}
-
-void print_debug() {
-	Nokia5110_Clear();
-	Nokia5110_OutString("LPrd:  ");
-	Nokia5110_OutUDec(leftPeriod);
-	//Nokia5110_OutString("            ");
-	Nokia5110_OutString("RPrd:  ");
-	Nokia5110_OutUDec(rightPeriod);
-	
-	Nokia5110_OutString("            ");
-	
-	Nokia5110_OutString("LCnt:  ");
-	Nokia5110_OutUDec(leftCount);
-	Nokia5110_OutString("RCnt:  ");
-	Nokia5110_OutUDec(rightCount);
-}
-
-uint16_t right_e_old = 0;
-uint32_t right_E = 0;
-uint16_t right_pid_controller(uint16_t y, uint16_t r) {
-	uint16_t e = r - y;
-	uint16_t e_dot = (e - right_e_old) / DELTA_T;
-	
-	if (right_E + e < 32767) right_E += e;
-//	right_E += e;
-	uint16_t u = e + right_E + 10 * e_dot;
-	right_e_old = e;
+	int32_t u = K_P * e + K_I * E + K_D * e_dot;
+	e_old = e;
 	
 	return u;
 }
 
-uint16_t left_e_old = 0;
-uint32_t left_E = 0;
-uint16_t left_pid_controller(uint16_t y, uint16_t r) {
-	uint16_t e = r - y;
-	uint16_t e_dot = (e - left_e_old) / DELTA_T;
+int32_t left_pid_controller(uint16_t y, uint16_t r) {
+	static int32_t e_old = 0;
+	static int32_t E = 0;
 	
-	if (left_E + e < 32767) left_E += e;
-//	left_E += e;
-	uint16_t u = e + left_E + 10 * e_dot;
-	left_e_old = e;
+	int32_t e = (int32_t) r - (int32_t) y;
+	int32_t e_dot = (e - e_old) / DELTA_T;
+
+	E = CLAMP(E + e, 0, 1000);
+
+	int32_t u = K_P * e + K_I * E + K_D * e_dot;
+	e_old = e;
 	
 	return u;
 }
@@ -446,7 +379,63 @@ double sonar2_measure(void) {
 }
 
 
+// ********* PRINTING METHODS ***************
+void print_sonars(double son1, double son2) {
+	static uint32_t count = 0;
+	char str1[80];
+	char str2[80];
+	
+	sprintf(str1, "%f", son1);
+	sprintf(str2, "%f", son2);
+	str1[9] = '\0';
+	str2[9] = '\0';
+	
+	Nokia5110_Clear();
+	Nokia5110_OutString("Son1:           ");
+	Nokia5110_OutString(str1);
+	Nokia5110_OutString("            ");
+	Nokia5110_OutString("Son2:           ");
+	Nokia5110_OutString(str2);
+//	Nokia5110_OutString("Cnt: ");
+//	Nokia5110_OutUDec(count++);
+}
 
+void print_udecs(uint32_t ns1, uint32_t ns2) {
+	Nokia5110_Clear();
+	Nokia5110_OutString("S1:           ");
+	Nokia5110_OutUDec(ns1);
+	Nokia5110_OutString("            ");
+	Nokia5110_OutString("S2:           ");
+	Nokia5110_OutUDec(ns2);
+	Nokia5110_OutString("            ");
+}
+
+void print_strings(char* ns1, char* ns2) {
+	Nokia5110_Clear();
+	Nokia5110_OutString("Ude1:           ");
+	Nokia5110_OutString(ns1);
+	Nokia5110_OutString("            ");
+	Nokia5110_OutString("Ude2:           ");
+	Nokia5110_OutString(ns2);
+	Nokia5110_OutString("            ");
+}
+
+
+void print_debug() {
+	Nokia5110_Clear();
+	Nokia5110_OutString("LPrd:  ");
+	Nokia5110_OutUDec(leftPeriod);
+	//Nokia5110_OutString("            ");
+	Nokia5110_OutString("RPrd:  ");
+	Nokia5110_OutUDec(rightPeriod);
+	
+	Nokia5110_OutString("            ");
+	
+	Nokia5110_OutString("LCnt:  ");
+	Nokia5110_OutUDec(leftCount);
+	Nokia5110_OutString("RCnt:  ");
+	Nokia5110_OutUDec(rightCount);
+}
 
 
 
