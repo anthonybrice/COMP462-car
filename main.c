@@ -43,7 +43,8 @@
 #define FALSE (0)
 
 #define CALIBRATION	0
-#define DELTA_T 60000
+#define DELTA_T 180000
+//#define DELTA_T 30000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
@@ -52,23 +53,16 @@
 #define K_I 0
 #define K_D 0
 
-#define K_PB1 0.5
-#define K_PB2 1
-#define K_DB 1.25
+#define K_PB1 0.67
+#define K_PB2 1.5
+#define K_DB 1.67
 #define K_IB 0
 
-#define V_DESIRED 6500
-#define TURN_CALBR 6500
-
+#define V_DESIRED 7000
+#define TURN_CALBR 7000
 
 #define R 3.0
 #define L 13.0
-
-
-//#define SIZE 200
-//uint16_t leftWheelBuf[SIZE];
-//uint16_t rightWheelBuf[SIZE];
-uint32_t count = 0;
 
 void DisableInterrupts(void); // Disable interrupts
 void EnableInterrupts(void);  // Enable interrupts
@@ -129,15 +123,20 @@ struct _Car {
 	const double distance;
 };
 
-Car states[2] = {
+Car states[3] = {
 	{ // straight
-		.left_velocity = V_DESIRED + 500,
-		.right_velocity = V_DESIRED - 500,
+		.left_velocity = V_DESIRED,
+		.right_velocity = V_DESIRED,
 		.distance = 0.5
 	},
 	{ // turn right
-		.left_velocity = 10000,
-		.right_velocity = 4000,
+		.left_velocity = 7000,
+		.right_velocity = 5000,
+		.distance = 0.0
+	}, 
+	{ // turn left
+		.left_velocity = 3000,
+		.right_velocity = 10000,
 		.distance = 0.0
 	}
 };
@@ -208,7 +207,11 @@ int main(void) {
 		if (sonar1 == -1.0) continue;
 		
 		double ed;
-		if (sonar1 > 1.0) {
+		if (sonar2 >= 0 && sonar2 < 0.7) {
+			// turn left
+			car = &states[2];
+			ed = 0.0;
+		} else if (sonar1 > 1.0) {
 			// turn right
 			car = &states[1]; 
 			ed = 0.0; 
@@ -232,21 +235,27 @@ int main(void) {
 		PWM_Duty1(CLAMP((int32_t) rm + right_u, 0, 14999)); // right
 		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left
 		
-		uint32_t runTime = cycles_to_delay_units(0x00ffffff - SYSTICK_STCVR);
+		uint32_t delay_time;
+		if (0x00010000 & SYSTICK_STCSR) {
+			delay_time = 1;
+		} else {
+			uint32_t run_time = cycles_to_delay_units(0x00ffffff - SYSTICK_STCVR);
+			delay_time = DELTA_T - run_time;
+		}
 		
-		Delay(DELTA_T - runTime);
+		Delay(delay_time);
   }
 }
 
 /**
- * 48MHz means 1 cycles is 2.08E-8 seconds.
+ * 48MHz means 1 cycle is 2.08E-8 seconds.
  * Then multiply by 1E6 to get microseconds.
  * Then multiply by 6 to convert to delay units.
  * Delay(60) == 10 microseconds, since the function is linear, 
  * 60x == 10 ==> x == 1/6 microseconds.
  */
 uint32_t cycles_to_delay_units(uint32_t time) {
-	return time * 0.12; // time * 2.08E-8 * 1E6 * 6
+	return (uint32_t) (time * 0.12); // time * 2.08E-8 * 1E6 * 6
 }
 
 uint16_t scale(uint16_t period) {
@@ -297,6 +306,7 @@ double pid_controller(double y, double r) {
 	double e = r - y;
 	double e_dot = (e - e_old) / DELTA_T;
 	
+	// if we are too far from wall, use K_PB1. Else use K_PB2
 	double k = e < 0 ? K_PB1 : K_PB2;
 	
 	E = CLAMP(E + e, -1, 1);
@@ -421,9 +431,8 @@ double sonar1_measure(void) {
 	while ((TA2CCTL1 & 0x0001) == 0);
 	rising = TA2CCR1;
 	TA2CCTL1 = 0x8900;
-	uint16_t prev_ccr = 0;
 	while ((TA2CCTL1 & 0x0001) == 0) {
-		//if ((TA2CCR1 - rising - CALIBRATION) >= 32768) return -1.0;
+		if ((TA2CCR1 - rising - CALIBRATION) >= 16384) return -1.0;
 	}
 	
 	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
@@ -445,7 +454,7 @@ double sonar2_measure(void) {
 	rising = TA3CCR0;
 	TA3CCTL0 = 0x8900;
 	while ((TA3CCTL0 & 0x0001) == 0) {
-		//if ((TA3CCR0 - rising - CALIBRATION) >= 32768) return -1.0;
+		if ((TA3CCR0 - rising - CALIBRATION) >= 16384) return -1.0;
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;

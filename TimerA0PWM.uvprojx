@@ -427,16 +427,6 @@
               <FilePath>.\PWM.c</FilePath>
             </File>
             <File>
-              <FileName>ClockSystem.s</FileName>
-              <FileType>2</FileType>
-              <FilePath>.\ClockSystem.s</FilePath>
-            </File>
-            <File>
-              <FileName>SysTick.s</FileName>
-              <FileType>2</FileType>
-              <FilePath>.\SysTick.s</FilePath>
-            </File>
-            <File>
               <FileName>InputCapture.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\InputCapture.c</FilePath>
@@ -455,6 +445,26 @@
               <FileName>Nokia5110.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\Nokia5110.h</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SysTick.c</FilePath>
+            </File>
+            <File>
+              <FileName>SysTick.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\SysTick.h</FilePath>
+            </File>
+            <File>
+              <FileName>ClockSystem.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\ClockSystem.h</FilePath>
+            </File>
+            <File>
+              <FileName>ClockSystem.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\ClockSystem.c</FilePath>
             </File>
           </Files>
         </Group>
