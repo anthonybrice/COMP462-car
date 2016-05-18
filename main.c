@@ -32,7 +32,6 @@
 #include <stdio.h>
 
 #include "msp432p401r.h"
-//#include "UART.h"
 #include "ClockSystem.h"
 #include "SysTickInts.h"
 #include "InputCapture.h"
@@ -44,7 +43,7 @@
 #define FALSE (0)
 
 #define CALIBRATION	0
-#define DELTA_T 10000
+#define DELTA_T 60000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
@@ -123,8 +122,22 @@ uint16_t scale(uint16_t period);
 typedef struct _Car Car;
 	
 struct _Car {
-	uint16_t velocity;
-	double heading;
+	const uint16_t left_velocity;
+	const uint16_t right_velocity;
+	const double distance;
+};
+
+Car states[2] = {
+	{ // straight
+		.left_velocity = V_DESIRED + 500,
+		.right_velocity = V_DESIRED - 500,
+		.distance = 0.5
+	},
+	{ // turn right
+		.left_velocity = 10000,
+		.right_velocity = 5000,
+		.distance = 0.0
+	}
 };
 
 // 50Hz squarewave on P7.3
@@ -141,8 +154,6 @@ uint16_t rightPeriod;
 uint16_t rightFirst;
 int rightDone;
 uint16_t rightCount = 0;
-	
-	
 
 void left_period_measure(uint16_t time) {
 	P2OUT = P2OUT^0x02;              // toggle P2.1
@@ -185,7 +196,7 @@ int main(void) {
 	TimerCapture1_Init(&left_period_measure, &right_period_measure);
 	EnableInterrupts();
 	
-	Car car = { .velocity = V_DESIRED, .heading = 0.0 };
+	Car* car = &states[0];
 
   while (TRUE) {
 		
@@ -194,19 +205,25 @@ int main(void) {
 		
 		if (sonar1 == -1.0) continue;
 		
-		// get error from distance desired
-		double dd = 0.5;
+		double ed;
+		if (sonar1 > 1.0) {
+			// turn right
+			car = &states[1];
+			ed = 0.0; 
+		} else {
+			// head straight
+			car = &states[0];
+			ed = pid_controller(sonar1, car->distance);
+		}
 		
-		double ed = pid_controller(sonar1, dd);
-		
-		int32_t vld = V_DESIRED - ed * TURN_CALBR;
-		int32_t vrd = V_DESIRED + ed * TURN_CALBR;
+		int32_t vld = car->left_velocity - ed * TURN_CALBR;
+		int32_t vrd = car->right_velocity + ed * TURN_CALBR;
 		
 		print_sonars(sonar1, sonar2, vld, vrd);
 				
 		uint16_t lm = scale(leftPeriod);
 		uint16_t rm = scale(rightPeriod);
-				
+			
 		int32_t left_u = left_pid_controller(lm, vld);
 		int32_t right_u = right_pid_controller(rm, vrd);
 		
@@ -412,7 +429,7 @@ double sonar2_measure(void) {
 	rising = TA3CCR0;
 	TA3CCTL0 = 0x8900;
 	while ((TA3CCTL0 & 0x0001) == 0) {
-		if ((TA2CCR1 - rising) >= 32768) return -1.0;
+		if ((TA3CCR0 - rising) >= 32768) return -1.0;
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;
@@ -425,7 +442,6 @@ double sonar2_measure(void) {
 
 // ********* PRINTING METHODS ***************
 void print_sonars(double son1, double son2, int32_t vld, int32_t vrd) {
-	static uint32_t count = 0;
 	char str1[80];
 	char str2[80];
 	

@@ -3,9 +3,9 @@
 <title>Static Call Graph - [.\Objects\PWM.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\PWM.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Tue May 17 16:39:37 2016
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060061: Last Updated: Tue May 17 17:55:46 2016
 <BR><P>
-<H3>Maximum Stack Usage =        368 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        360 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 __rt_entry_main &rArr; main &rArr; print_sonars &rArr; __2sprintf &rArr; _printf_char_common &rArr; __printf
 <P>
@@ -238,7 +238,7 @@ Global Symbols
 <P><STRONG><a name="[d8]"></a>__rt_entry_postsh_1</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, __rtentry2.o(.ARM.Collect$$rtentry$$00000009))
 
 <P><STRONG><a name="[53]"></a>__rt_entry_main</STRONG> (Thumb, 0 bytes, Stack size unknown bytes, __rtentry2.o(.ARM.Collect$$rtentry$$0000000D))
-<BR><BR>[Stack]<UL><LI>Max Depth = 368 + Unknown Stack Size
+<BR><BR>[Stack]<UL><LI>Max Depth = 360 + Unknown Stack Size
 <LI>Call Chain = __rt_entry_main &rArr; main &rArr; print_sonars &rArr; __2sprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[55]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;exit
@@ -488,7 +488,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[39]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_sputc
 <LI><a href="#[5c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_printf_char_common
 </UL>
-<BR>[Called By]<UL><LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
+<BR>[Called By]<UL><LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
 </UL>
 
 <P><STRONG><a name="[5d]"></a>__printf</STRONG> (Thumb, 104 bytes, Stack size 24 bytes, __printf.o(.text))
@@ -682,7 +682,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[74]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_SetCursor
 <LI><a href="#[73]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;lcddatawrite
 </UL>
-<BR>[Called By]<UL><LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
+<BR>[Called By]<UL><LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -709,7 +709,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[77]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_OutChar
 </UL>
 <BR>[Called By]<UL><LI><a href="#[79]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_OutUDec
-<LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
+<LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
 </UL>
 
 <P><STRONG><a name="[79]"></a>Nokia5110_OutUDec</STRONG> (Thumb, 394 bytes, Stack size 16 bytes, nokia5110.o(i.Nokia5110_OutUDec))
@@ -718,7 +718,7 @@ Global Symbols
 <BR>[Calls]<UL><LI><a href="#[77]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_OutChar
 <LI><a href="#[78]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_OutString
 </UL>
-<BR>[Called By]<UL><LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
+<BR>[Called By]<UL><LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
 </UL>
 
 <P><STRONG><a name="[74]"></a>Nokia5110_SetCursor</STRONG> (Thumb, 46 bytes, Stack size 16 bytes, nokia5110.o(i.Nokia5110_SetCursor))
@@ -729,11 +729,11 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_Clear
 </UL>
 
-<P><STRONG><a name="[9d]"></a>PWM_Duty1</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, pwm.o(i.PWM_Duty1))
+<P><STRONG><a name="[9e]"></a>PWM_Duty1</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, pwm.o(i.PWM_Duty1))
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[9e]"></a>PWM_Duty2</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, pwm.o(i.PWM_Duty2))
+<P><STRONG><a name="[9f]"></a>PWM_Duty2</STRONG> (Thumb, 22 bytes, Stack size 0 bytes, pwm.o(i.PWM_Duty2))
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -875,7 +875,7 @@ Global Symbols
 <P><STRONG><a name="[3c]"></a>left_period_measure</STRONG> (Thumb, 34 bytes, Stack size 0 bytes, main.o(i.left_period_measure))
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.main)
 </UL>
-<P><STRONG><a name="[9b]"></a>left_pid_controller</STRONG> (Thumb, 84 bytes, Stack size 16 bytes, main.o(i.left_pid_controller))
+<P><STRONG><a name="[9c]"></a>left_pid_controller</STRONG> (Thumb, 84 bytes, Stack size 16 bytes, main.o(i.left_pid_controller))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = left_pid_controller
 </UL>
 <BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
@@ -885,19 +885,21 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[54]"></a>main</STRONG> (Thumb, 362 bytes, Stack size 56 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 368 + Unknown Stack Size
+<P><STRONG><a name="[54]"></a>main</STRONG> (Thumb, 412 bytes, Stack size 48 bytes, main.o(i.main))
+<BR><BR>[Stack]<UL><LI>Max Depth = 360 + Unknown Stack Size
 <LI>Call Chain = main &rArr; print_sonars &rArr; __2sprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[7e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dmul
-<LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_d2iz
+<BR>[Calls]<UL><LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdrcmple
+<LI><a href="#[7e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dmul
+<LI><a href="#[8e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ui2d
+<LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_d2iz
 <LI><a href="#[88]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdcmpeq
-<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_drsub
+<LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dsub
 <LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dadd
 <LI><a href="#[7c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;TimerCapture1_Init
 <LI><a href="#[7a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Init
-<LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Duty2
-<LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Duty1
+<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Duty2
+<LI><a href="#[9e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PWM_Duty1
 <LI><a href="#[75]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_Init
 <LI><a href="#[72]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Nokia5110_Clear
 <LI><a href="#[40]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;EnableInterrupts
@@ -906,13 +908,13 @@ Global Symbols
 <LI><a href="#[92]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sonar2_init
 <LI><a href="#[94]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sonar1_measure
 <LI><a href="#[91]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sonar1_init
-<LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scale
-<LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;right_pid_controller
-<LI><a href="#[99]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;scale
+<LI><a href="#[9d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;right_pid_controller
+<LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;print_sonars
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
 <LI><a href="#[93]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;period_measure_init
 <LI><a href="#[8f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;logic_init
-<LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;left_pid_controller
+<LI><a href="#[9c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;left_pid_controller
 <LI><a href="#[90]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;encoder_init
 <LI><a href="#[8b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;average_right
 <LI><a href="#[8a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;average_front
@@ -925,15 +927,15 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[96]"></a>pid_controller</STRONG> (Thumb, 252 bytes, Stack size 88 bytes, main.o(i.pid_controller))
+<P><STRONG><a name="[97]"></a>pid_controller</STRONG> (Thumb, 252 bytes, Stack size 88 bytes, main.o(i.pid_controller))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = pid_controller &rArr; __aeabi_dmul
 </UL>
-<BR>[Calls]<UL><LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdrcmple
+<BR>[Calls]<UL><LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdrcmple
 <LI><a href="#[7e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dmul
-<LI><a href="#[a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdcmple
+<LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdcmple
 <LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ddiv
-<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dsub
-<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_drsub
+<LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dsub
+<LI><a href="#[a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_drsub
 <LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dadd
 </UL>
 <BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
@@ -952,18 +954,18 @@ Global Symbols
 <LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__mathlib_dbl_divzero
 <LI><a href="#[85]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__ARM_scalbn
 <LI><a href="#[61]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__set_errno
-<LI><a href="#[a1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdrcmple
+<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_cdrcmple
 <LI><a href="#[7e]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dmul
 <LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_i2d
 <LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_ddiv
-<LI><a href="#[9f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dsub
-<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_drsub
+<LI><a href="#[98]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dsub
+<LI><a href="#[a0]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_drsub
 <LI><a href="#[7f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__aeabi_dadd
 </UL>
 <BR>[Called By]<UL><LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;calculateDistance
 </UL>
 
-<P><STRONG><a name="[99]"></a>print_sonars</STRONG> (Thumb, 114 bytes, Stack size 192 bytes, main.o(i.print_sonars))
+<P><STRONG><a name="[9a]"></a>print_sonars</STRONG> (Thumb, 114 bytes, Stack size 192 bytes, main.o(i.print_sonars))
 <BR><BR>[Stack]<UL><LI>Max Depth = 312 + Unknown Stack Size
 <LI>Call Chain = print_sonars &rArr; __2sprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
@@ -978,13 +980,13 @@ Global Symbols
 <P><STRONG><a name="[3b]"></a>right_period_measure</STRONG> (Thumb, 34 bytes, Stack size 0 bytes, main.o(i.right_period_measure))
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.main)
 </UL>
-<P><STRONG><a name="[9c]"></a>right_pid_controller</STRONG> (Thumb, 84 bytes, Stack size 16 bytes, main.o(i.right_pid_controller))
+<P><STRONG><a name="[9d]"></a>right_pid_controller</STRONG> (Thumb, 84 bytes, Stack size 16 bytes, main.o(i.right_pid_controller))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = right_pid_controller
 </UL>
 <BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[9a]"></a>scale</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, main.o(i.scale))
+<P><STRONG><a name="[9b]"></a>scale</STRONG> (Thumb, 20 bytes, Stack size 0 bytes, main.o(i.scale))
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
@@ -1005,7 +1007,7 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
-<P><STRONG><a name="[95]"></a>sonar2_measure</STRONG> (Thumb, 164 bytes, Stack size 24 bytes, main.o(i.sonar2_measure))
+<P><STRONG><a name="[95]"></a>sonar2_measure</STRONG> (Thumb, 166 bytes, Stack size 24 bytes, main.o(i.sonar2_measure))
 <BR><BR>[Stack]<UL><LI>Max Depth = 248<LI>Call Chain = sonar2_measure &rArr; calculateDistance &rArr; pow &rArr; sqrt &rArr; _dsqrt &rArr; __fpl_dnaninf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;calculateDistance
@@ -1037,7 +1039,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[7d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__kernel_poly
 <LI><a href="#[82]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__mathlib_dbl_infnan2
 <LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pow
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;average
 </UL>
@@ -1065,7 +1067,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[83]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__mathlib_dbl_invalid
 <LI><a href="#[80]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__mathlib_dbl_divzero
 <LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pow
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
 <LI><a href="#[87]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;average
 </UL>
 
@@ -1086,7 +1088,7 @@ Global Symbols
 <LI><a href="#[ad]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__fpl_dcmp_Inf
 </UL>
 
-<P><STRONG><a name="[98]"></a>__aeabi_d2iz</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, dfix.o(x$fpl$dfix))
+<P><STRONG><a name="[99]"></a>__aeabi_d2iz</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, dfix.o(x$fpl$dfix))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = __aeabi_d2iz
 </UL>
 <BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
@@ -1104,15 +1106,16 @@ Global Symbols
 <P><STRONG><a name="[e9]"></a>_dflt</STRONG> (Thumb, 46 bytes, Stack size 0 bytes, dflt_clz.o(x$fpl$dflt), UNUSED)
 
 <P><STRONG><a name="[8e]"></a>__aeabi_ui2d</STRONG> (Thumb, 0 bytes, Stack size 0 bytes, dflt_clz.o(x$fpl$dfltu))
-<BR><BR>[Called By]<UL><LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;calculateDistance
+<BR><BR>[Called By]<UL><LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;calculateDistance
 </UL>
 
 <P><STRONG><a name="[ea]"></a>_dfltu</STRONG> (Thumb, 38 bytes, Stack size 0 bytes, dflt_clz.o(x$fpl$dfltu), UNUSED)
 
-<P><STRONG><a name="[a0]"></a>__aeabi_cdcmple</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, dleqf.o(x$fpl$dleqf))
+<P><STRONG><a name="[a1]"></a>__aeabi_cdcmple</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, dleqf.o(x$fpl$dleqf))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = __aeabi_cdcmple
 </UL>
-<BR>[Called By]<UL><LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<BR>[Called By]<UL><LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
 </UL>
 
 <P><STRONG><a name="[af]"></a>_dcmple</STRONG> (Thumb, 120 bytes, Stack size 32 bytes, dleqf.o(x$fpl$dleqf), UNUSED)
@@ -1129,7 +1132,7 @@ Global Symbols
 </UL>
 <BR>[Called By]<UL><LI><a href="#[7d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__kernel_poly
 <LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pow
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[8c]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;calculateDistance
 </UL>
@@ -1158,23 +1161,23 @@ Global Symbols
 <LI><a href="#[a5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;_dadd
 </UL>
 
-<P><STRONG><a name="[a1]"></a>__aeabi_cdrcmple</STRONG> (Thumb, 0 bytes, Stack size 16 bytes, drleqf.o(x$fpl$drleqf))
+<P><STRONG><a name="[96]"></a>__aeabi_cdrcmple</STRONG> (Thumb, 0 bytes, Stack size 16 bytes, drleqf.o(x$fpl$drleqf))
 <BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = __aeabi_cdrcmple
 </UL>
 <BR>[Called By]<UL><LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pow
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
 <P><STRONG><a name="[b1]"></a>_drcmple</STRONG> (Thumb, 108 bytes, Stack size 16 bytes, drleqf.o(x$fpl$drleqf), UNUSED)
 <BR><BR>[Calls]<UL><LI><a href="#[b2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;__fpl_dcmple_InfNaN
 </UL>
 
-<P><STRONG><a name="[97]"></a>__aeabi_drsub</STRONG> (Thumb, 0 bytes, Stack size 8 bytes, daddsub_clz.o(x$fpl$drsb))
+<P><STRONG><a name="[a0]"></a>__aeabi_drsub</STRONG> (Thumb, 0 bytes, Stack size 8 bytes, daddsub_clz.o(x$fpl$drsb))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = __aeabi_drsub
 </UL>
 <BR>[Called By]<UL><LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pow
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
-<LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
 </UL>
 
 <P><STRONG><a name="[b3]"></a>_drsb</STRONG> (Thumb, 22 bytes, Stack size 8 bytes, daddsub_clz.o(x$fpl$drsb), UNUSED)
@@ -1190,11 +1193,12 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;sqrt
 </UL>
 
-<P><STRONG><a name="[9f]"></a>__aeabi_dsub</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, daddsub_clz.o(x$fpl$dsub))
+<P><STRONG><a name="[98]"></a>__aeabi_dsub</STRONG> (Thumb, 0 bytes, Stack size 32 bytes, daddsub_clz.o(x$fpl$dsub))
 <BR><BR>[Stack]<UL><LI>Max Depth = 32<LI>Call Chain = __aeabi_dsub
 </UL>
 <BR>[Called By]<UL><LI><a href="#[8d]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pow
-<LI><a href="#[96]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[97]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;pid_controller
+<LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
 
 <P><STRONG><a name="[b5]"></a>_dsub</STRONG> (Thumb, 464 bytes, Stack size 32 bytes, daddsub_clz.o(x$fpl$dsub), UNUSED)
