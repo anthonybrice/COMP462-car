@@ -30,14 +30,14 @@
 //#include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
-
+ 
 #include "msp432p401r.h"
 #include "ClockSystem.h"
-#include "SysTickInts.h"
 #include "InputCapture.h"
 #include "PWM.h"
 
 #include "Nokia5110.h"
+#include "SysTick.h"
 
 #define TRUE (!FALSE)
 #define FALSE (0)
@@ -46,6 +46,7 @@
 #define DELTA_T 60000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
 #define K_P 1
 #define K_I 0
@@ -56,8 +57,8 @@
 #define K_DB 1.25
 #define K_IB 0
 
-#define V_DESIRED 7500
-#define TURN_CALBR 7500
+#define V_DESIRED 6500
+#define TURN_CALBR 6500
 
 
 #define R 3.0
@@ -98,6 +99,7 @@ double average_front(double x);
 double average_right(double x);
 double pid_controller(double y, double r);
 uint16_t scale(uint16_t period);
+uint32_t cycles_to_delay_units(uint32_t time);
 
 // delay function for testing from sysctl.c
 // which delays 3*ulCount cycles
@@ -135,7 +137,7 @@ Car states[2] = {
 	},
 	{ // turn right
 		.left_velocity = 10000,
-		.right_velocity = 5000,
+		.right_velocity = 4000,
 		.distance = 0.0
 	}
 };
@@ -173,7 +175,6 @@ uint32_t ns1 = 0;
 uint32_t ns2 = 0;
 
 int main(void) {
-	//SysTick_Init(10);
 	Clock_Init48MHz();
   PWM_Init(15000,0,0); //while(1){};
   // Squarewave Period/4 (20ms)
@@ -197,8 +198,9 @@ int main(void) {
 	EnableInterrupts();
 	
 	Car* car = &states[0];
-
+	
   while (TRUE) {
+		SysTick_Init(); 
 		
 		double sonar1 = average_right(sonar1_measure());
 		double sonar2 = average_front(sonar2_measure());
@@ -208,7 +210,7 @@ int main(void) {
 		double ed;
 		if (sonar1 > 1.0) {
 			// turn right
-			car = &states[1];
+			car = &states[1]; 
 			ed = 0.0; 
 		} else {
 			// head straight
@@ -230,8 +232,21 @@ int main(void) {
 		PWM_Duty1(CLAMP((int32_t) rm + right_u, 0, 14999)); // right
 		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left
 		
-		Delay(DELTA_T);
+		uint32_t runTime = cycles_to_delay_units(0x00ffffff - SYSTICK_STCVR);
+		
+		Delay(DELTA_T - runTime);
   }
+}
+
+/**
+ * 48MHz means 1 cycles is 2.08E-8 seconds.
+ * Then multiply by 1E6 to get microseconds.
+ * Then multiply by 6 to convert to delay units.
+ * Delay(60) == 10 microseconds, since the function is linear, 
+ * 60x == 10 ==> x == 1/6 microseconds.
+ */
+uint32_t cycles_to_delay_units(uint32_t time) {
+	return time * 0.12; // time * 2.08E-8 * 1E6 * 6
 }
 
 uint16_t scale(uint16_t period) {
@@ -367,7 +382,7 @@ void sonar1_init(void) { // right
 	P5DIR &= ~0x40;
 	
 	TA2CTL &= ~0x0030;
-	TA2CTL = 0x0280;
+	TA2CTL = 0x02c0;
 	TA2EX0 &= ~0x0007;
 }
 
@@ -384,18 +399,18 @@ void sonar2_init(void) {	// front
 	P10DIR &= ~0x10;
 	
 	TA3CTL &= ~0x0030;
-	TA3CTL = 0x0280;
+	TA3CTL = 0x02c0;
 	TA3EX0 &= ~0x0007;
 }
 
 double calculateDistance(uint32_t x) {
 	double ns = x * pow(10, -9);
 	
-	return (340 * ns) * 200;
+	return (340 * ns) * 400;
 }
 
 double sonar1_measure(void) {
-	uint32_t rising;
+	uint16_t rising;
 	TA2CTL &= ~0x0030;
 	
 	TA2CCTL1 = 0x4900;
@@ -406,8 +421,9 @@ double sonar1_measure(void) {
 	while ((TA2CCTL1 & 0x0001) == 0);
 	rising = TA2CCR1;
 	TA2CCTL1 = 0x8900;
+	uint16_t prev_ccr = 0;
 	while ((TA2CCTL1 & 0x0001) == 0) {
-		if ((TA2CCR1 - rising) >= 32768) return -1.0;
+		//if ((TA2CCR1 - rising - CALIBRATION) >= 32768) return -1.0;
 	}
 	
 	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
@@ -418,7 +434,7 @@ double sonar1_measure(void) {
 }
 
 double sonar2_measure(void) {
-	uint32_t rising;
+	uint16_t rising;
 	TA3CTL &= ~0x0030;
 	TA3CCTL0 = 0x4900;
 	TA3CTL |= 0x0024;
@@ -429,7 +445,7 @@ double sonar2_measure(void) {
 	rising = TA3CCR0;
 	TA3CCTL0 = 0x8900;
 	while ((TA3CCTL0 & 0x0001) == 0) {
-		if ((TA3CCR0 - rising) >= 32768) return -1.0;
+		//if ((TA3CCR0 - rising - CALIBRATION) >= 32768) return -1.0;
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;

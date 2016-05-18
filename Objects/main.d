@@ -11,7 +11,7 @@
 .\objects\main.o: C:\Keil_v5\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include\core_cmSimd.h
 .\objects\main.o: C:\Keil_v5\ARM\PACK\TexasInstruments\MSP432\1.0.2\Device\Include\system_msp432.h
 .\objects\main.o: ClockSystem.h
-.\objects\main.o: SysTickInts.h
 .\objects\main.o: InputCapture.h
 .\objects\main.o: PWM.h
 .\objects\main.o: Nokia5110.h
+.\objects\main.o: SysTick.h
