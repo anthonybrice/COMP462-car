@@ -47,7 +47,6 @@
 //#define DELTA_T 30000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
 #define K_P 1
 #define K_I 0
