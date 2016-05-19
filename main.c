@@ -43,7 +43,7 @@
 #define FALSE (0)
 
 #define CALIBRATION	0
-#define DELTA_T 60000
+#define DELTA_T 50000
 //#define DELTA_T 30000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
@@ -52,9 +52,9 @@
 #define K_I 0
 #define K_D 0
 
-#define K_PB1 1
-#define K_PB2 2
-#define K_DB 3.0
+#define K_PB1 0.89
+#define K_PB2 2.0
+#define K_DB 4.0
 #define K_IB 0
 
 #define V_DESIRED 15000
@@ -230,18 +230,7 @@ int main(void) {
 		
 		PWM_Duty1(CLAMP((int32_t) rm + right_u, 0, 14999)); // right
 		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left
-		
-		uint32_t delay_time;
-		if (0x00010000 & SYSTICK_STCSR) {
-			delay_time = 1;
-		} else {
-			uint32_t run_time = cycles_to_delay_units(0x00ffffff - SYSTICK_STCVR);
-			delay_time = DELTA_T - run_time;
-		}
-		
-//		Delay(delay_time);
-		Delay(DELTA_T);
-  }
+	}
 }
 
 /**
@@ -259,41 +248,38 @@ uint16_t scale(uint16_t period) {
 	return (15000 * ((uint32_t) period)) / 65535;
 }
 
-double average(double* arr, uint16_t length) {
-	double sum = 0.0;
-	int divisor = length;
-	for (int i = 0; i < length; i++) {
-		if (arr[i] != -1.0) {
-			if (arr[i] == 0.0) divisor--;
-			sum += arr[i];
-		} else {
-			return -1.0;
-		}
-	}
-	
-	return sum / divisor;
-}
-
 #define AVG_LENGTH 10
 
 double average_right(double x) {
+	if (x == -1.0) return x;
+	
 	static int i = 0;
 	static double sonars[AVG_LENGTH] = { 0.0 };
+	static int n = 0;
 	
-	sonars[i++] = x;
+	n = CLAMP(n + 1, 0, 10);
+	
+	sonars[i] = sonars[i - 1 < 0 ? AVG_LENGTH - 1 : i - 1] + (x - sonars[i]) / n;
+	i++;
 	if (i == AVG_LENGTH) i = 0;
 	
-	return average(sonars, AVG_LENGTH);
+	return sonars[i - 1 < 0 ? AVG_LENGTH - 1 : i - 1];
 }
 
 double average_front(double x) {
+	if (x == -1.0) return x;
+	
 	static int i = 0;
 	static double sonars[AVG_LENGTH] = { 0.0 };
+	static int n = 0;
 	
-	sonars[i++] = x;
+	n = CLAMP(n + 1, 0, 10);
+	
+	sonars[i] = sonars[i - 1 < 0 ? AVG_LENGTH - 1 : i - 1] + (x - sonars[i]) / n;
+	i++;
 	if (i == AVG_LENGTH) i = 0;
 	
-	return average(sonars, AVG_LENGTH);
+	return sonars[i - 1 < 0 ? AVG_LENGTH - 1 : i - 1];
 }
 
 double pid_controller(double y, double r) {
@@ -429,7 +415,7 @@ double sonar1_measure(void) {
 	rising = TA2CCR1;
 	TA2CCTL1 = 0x8900;
 	while ((TA2CCTL1 & 0x0001) == 0) {
-		//if ((TA2CCR1 - rising - CALIBRATION) >= 16384) return -1.0;
+		if ((TA2CCR1 - rising - CALIBRATION) >= 16384) return -1.0;
 	}
 	
 	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
@@ -450,7 +436,7 @@ double sonar2_measure(void) {
 	rising = TA3CCR0;
 	TA3CCTL0 = 0x8900;
 	while ((TA3CCTL0 & 0x0001) == 0) {
-		//if ((TA3CCR0 - rising - CALIBRATION) >= 16384) return -1.0;
+		if ((TA3CCR0 - rising - CALIBRATION) >= 16384) return -1.0;
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;
