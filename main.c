@@ -229,8 +229,8 @@ int main(void) {
 		int32_t right_u = right_pid_controller(rm, vrd);
 		
 		PWM_Duty1(CLAMP((int32_t) rm + right_u, 0, 14999)); // right
-		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left
-	}
+		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left 
+	} 
 }
 
 /**
