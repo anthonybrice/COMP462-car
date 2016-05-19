@@ -122,7 +122,7 @@ struct _Car {
 	const double distance;
 };
 
-Car states[3] = {
+Car states[5] = {
 	{ // straight
 		.left_velocity = V_DESIRED,
 		.right_velocity = V_DESIRED,
@@ -137,6 +137,16 @@ Car states[3] = {
 		.left_velocity = 4200,
 		.right_velocity = 14000,
 		.distance = 0.0
+	},
+	{	// veer left
+		.left_velocity = 10000,
+		.right_velocity = 15000,
+		.distance = 0.0
+	},
+	{ // veer right
+		.left_velocity = 15000,
+		.right_velocity = 13500,
+		.distance = 0.0		
 	}
 };
 
@@ -160,6 +170,11 @@ void left_period_measure(uint16_t time) {
   leftPeriod = (time - leftFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
   leftFirst = time;                    // setup for next
   leftDone = 1;
+	
+	if (P2OUT & 0x02) 
+	{
+		leftCount++;
+	}
 }
 
 void right_period_measure(uint16_t time) {
@@ -167,6 +182,11 @@ void right_period_measure(uint16_t time) {
   rightPeriod = (time - rightFirst)&0xFFFF;  // 16 bits, 83.3 ns resolution
   rightFirst = time;                    // setup for next
   rightDone = 1;
+	
+	if (P3OUT & 0x02) 
+	{
+		rightCount++;
+	}
 }
 
 int main(void) {
@@ -194,6 +214,12 @@ int main(void) {
 	
 	Car* car = &states[0];
 	
+	int tick_avg = 0;
+	int gap_count = 0;
+//	int go_right = FALSE;
+	int started_turn = FALSE;
+	int go_right = TRUE;
+	int turn_type = 0;
   while (TRUE) {
 		SysTick_Init(); 
 		
@@ -202,6 +228,9 @@ int main(void) {
 		
 		if (sonar1 == -1.0) continue;
 		
+		int state0_looking_for_wall = FALSE;
+		int state1_looking_for_wall = FALSE;
+		
 		double ed;
 		if (sonar2 >= 0 && sonar2 < 0.7) {
 			// turn left
@@ -209,10 +238,58 @@ int main(void) {
 			ed = 0.0;
 		} else if (sonar1 > 1.0) {
 			// turn right
-			car = &states[1]; 
-			ed = 0.0; 
+			if (turn_type == 0) {
+				started_turn = TRUE;
+				car = &states[1]; 
+				ed = 0.0; 
+			}
+//			else {
+//				ed = 0.0;
+//				// veer left.. straight .. veer right
+//				
+//				tick_avg = (leftCount + rightCount) / 2;
+//				
+//				// veer left for .5m
+//				if (tick_avg < 53) car = &states[3];
+//				
+//				// straight 
+//				switch (gap_count) {
+//					case 0:
+//						if (tick_avg < 240) car = &states[0];
+//						break;
+//					case 1:
+//						if (tick_avg < 539) car = &states[0];
+//						break;
+//				}
+//				
+//				// veer right until wall
+//				if (gap_count == 0 && tick_avg >= 240) {
+//					state0_looking_for_wall = TRUE;
+//					car = &states[4];
+//				} else if (gap_count == 1 && tick_avg >= 539) {
+//					state1_looking_for_wall = TRUE;
+//					car = &states[4];
+//				}
+//			}
 		} else {
 			// head straight
+			if (started_turn) go_right = FALSE;
+			
+			if (state0_looking_for_wall) {
+				gap_count = 1;
+			}
+			
+			if (state1_looking_for_wall) {
+				gap_count = 0;
+			}
+			
+			state0_looking_for_wall = FALSE;
+			state1_looking_for_wall = FALSE;
+			
+			leftCount = 0;
+			rightCount = 0;
+			
+			tick_avg = 0;
 			car = &states[0];
 			ed = pid_controller(sonar1, car->distance);
 		}
