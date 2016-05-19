@@ -43,7 +43,7 @@
 #define FALSE (0)
 
 #define CALIBRATION	0
-#define DELTA_T 240000
+#define DELTA_T 60000
 //#define DELTA_T 30000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
@@ -53,13 +53,13 @@
 #define K_I 0
 #define K_D 0
 
-#define K_PB1 0.67
-#define K_PB2 1.5
+#define K_PB1 1
+#define K_PB2 2
 #define K_DB 3.0
 #define K_IB 0
 
-#define V_DESIRED 14000
-#define TURN_CALBR 14000
+#define V_DESIRED 15000
+#define TURN_CALBR 15000
 
 #define R 3.0
 #define L 13.0
@@ -169,9 +169,6 @@ void right_period_measure(uint16_t time) {
   rightFirst = time;                    // setup for next
   rightDone = 1;
 }
-
-uint32_t ns1 = 0;
-uint32_t ns2 = 0;
 
 int main(void) {
 	Clock_Init48MHz();
@@ -437,7 +434,6 @@ double sonar1_measure(void) {
 	}
 	
 	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
-	ns1 = ns;
 	double dist = calculateDistance(ns);
 	
 	return dist;
@@ -459,7 +455,6 @@ double sonar2_measure(void) {
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;
-	ns2 = ns;
 	double dist = calculateDistance(ns);
 	
 	return dist;
