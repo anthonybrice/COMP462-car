@@ -43,7 +43,7 @@
 #define FALSE (0)
 
 #define CALIBRATION	0
-#define DELTA_T 180000
+#define DELTA_T 240000
 //#define DELTA_T 30000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
@@ -55,11 +55,11 @@
 
 #define K_PB1 0.67
 #define K_PB2 1.5
-#define K_DB 1.67
+#define K_DB 3.0
 #define K_IB 0
 
-#define V_DESIRED 7000
-#define TURN_CALBR 7000
+#define V_DESIRED 14000
+#define TURN_CALBR 14000
 
 #define R 3.0
 #define L 13.0
@@ -130,13 +130,13 @@ Car states[3] = {
 		.distance = 0.5
 	},
 	{ // turn right
-		.left_velocity = 7000,
-		.right_velocity = 5000,
+		.left_velocity = 11000,
+		.right_velocity = 7143,
 		.distance = 0.0
 	}, 
 	{ // turn left
-		.left_velocity = 3000,
-		.right_velocity = 10000,
+		.left_velocity = 4200,
+		.right_velocity = 14000,
 		.distance = 0.0
 	}
 };
@@ -243,7 +243,8 @@ int main(void) {
 			delay_time = DELTA_T - run_time;
 		}
 		
-		Delay(delay_time);
+//		Delay(delay_time);
+		Delay(DELTA_T);
   }
 }
 
@@ -432,7 +433,7 @@ double sonar1_measure(void) {
 	rising = TA2CCR1;
 	TA2CCTL1 = 0x8900;
 	while ((TA2CCTL1 & 0x0001) == 0) {
-		if ((TA2CCR1 - rising - CALIBRATION) >= 16384) return -1.0;
+		//if ((TA2CCR1 - rising - CALIBRATION) >= 16384) return -1.0;
 	}
 	
 	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
@@ -454,7 +455,7 @@ double sonar2_measure(void) {
 	rising = TA3CCR0;
 	TA3CCTL0 = 0x8900;
 	while ((TA3CCTL0 & 0x0001) == 0) {
-		if ((TA3CCR0 - rising - CALIBRATION) >= 16384) return -1.0;
+		//if ((TA3CCR0 - rising - CALIBRATION) >= 16384) return -1.0;
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;
