@@ -1,3 +1,5 @@
+// Anthony Brice and Tucker Stone
+
 // main.c
 // Runs on MSP432
 // Squarewave on P7.3 using TimerA0 TA0.CCR0
