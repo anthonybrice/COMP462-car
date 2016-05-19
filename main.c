@@ -43,7 +43,7 @@
 #define FALSE (0)
 
 #define CALIBRATION	0
-#define DELTA_T 60000
+#define DELTA_T 360000
 //#define DELTA_T 30000
 
 #define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
@@ -54,12 +54,14 @@
 #define K_D 0
 
 #define K_PB1 1
-#define K_PB2 2
-#define K_DB 3.0
+#define K_PB2 1
+#define K_DB 0
 #define K_IB 0
 
-#define V_DESIRED 15000
-#define TURN_CALBR 15000
+#define K_SCALE 1
+
+#define V_DESIRED 7000
+#define TURN_CALBR 7000
 
 #define R 3.0
 #define L 13.0
@@ -82,16 +84,16 @@ void save_feedback(uint16_t left, uint16_t right);
 
 void sonar1_init(void);
 void sonar2_init(void);
-double sonar1_measure(void);
-double sonar2_measure(void);
+int32_t sonar1_measure(void);
+int32_t sonar2_measure(void);
 double calculateDistance(uint32_t x);
-void print_sonars(double son1, double son2, int32_t vld, int32_t vrd);
+void print_sonars(int32_t son1, int32_t son2, int32_t vld, int32_t vrd);
 void print_udecs(uint32_t ns1, uint32_t ns2);
 void print_strings(char* ns1, char* ns2);
-double average(double* arr, uint16_t length);
-double average_front(double x);
-double average_right(double x);
-double pid_controller(double y, double r);
+int32_t average(int32_t* arr, uint16_t length);
+int32_t average_front(int32_t x);
+int32_t average_right(int32_t x);
+int32_t pid_controller(int32_t y, int32_t r);
 uint16_t scale(uint16_t period);
 uint32_t cycles_to_delay_units(uint32_t time);
 
@@ -120,14 +122,14 @@ typedef struct _Car Car;
 struct _Car {
 	const uint16_t left_velocity;
 	const uint16_t right_velocity;
-	const double distance;
+	const uint16_t distance;
 };
 
 Car states[3] = {
 	{ // straight
 		.left_velocity = V_DESIRED,
 		.right_velocity = V_DESIRED,
-		.distance = 0.5
+		.distance = 3676
 	},
 	{ // turn right
 		.left_velocity = 11000,
@@ -198,20 +200,24 @@ int main(void) {
   while (TRUE) {
 		SysTick_Init(); 
 		
-		double sonar1 = average_right(sonar1_measure());
-		double sonar2 = average_front(sonar2_measure());
+//		double sonar1 = average_right(sonar1_measure());
+//		double sonar2 = average_front(sonar2_measure());
+//		int32_t sonar1 = average_right(sonar1_measure());
+//		int32_t sonar2 = average_front(sonar2_measure());
+		int32_t sonar1 = sonar1_measure();
+		int32_t sonar2 = sonar2_measure();
 		
-		if (sonar1 == -1.0) continue;
+		if (sonar1 == -1) continue;
 		
-		double ed;
-		if (sonar2 >= 0 && sonar2 < 0.7) {
+		int32_t ed;
+		if (sonar2 >= 0 && sonar2 < 5147) {
 			// turn left
 			car = &states[2];
-			ed = 0.0;
-		} else if (sonar1 > 1.0) {
+			ed = 0;
+		} else if (sonar1 >= 7353) {
 			// turn right
 			car = &states[1]; 
-			ed = 0.0; 
+			ed = 0; 
 		} else {
 			// head straight
 			car = &states[0];
@@ -229,8 +235,8 @@ int main(void) {
 		int32_t left_u = left_pid_controller(lm, vld);
 		int32_t right_u = right_pid_controller(rm, vrd);
 		
-		PWM_Duty1(CLAMP((int32_t) rm + right_u, 0, 14999)); // right
-		PWM_Duty2(CLAMP((int32_t) lm + left_u, 0, 14999)); // left
+		PWM_Duty1(CLAMP((int32_t) vrd + right_u, 0, 14999)); // right
+		PWM_Duty2(CLAMP((int32_t) vld + left_u, 0, 14999)); // left
 		
 		uint32_t delay_time;
 		if (0x00010000 & SYSTICK_STCSR) {
@@ -241,7 +247,6 @@ int main(void) {
 		}
 		
 //		Delay(delay_time);
-		Delay(DELTA_T);
   }
 }
 
@@ -253,22 +258,22 @@ int main(void) {
  * 60x == 10 ==> x == 1/6 microseconds.
  */
 uint32_t cycles_to_delay_units(uint32_t time) {
-	return (uint32_t) (time * 0.12); // time * 2.08E-8 * 1E6 * 6
+	return (uint32_t) ((time * 12) / 100); // time * 2.08E-8 * 1E6 * 6
 }
 
 uint16_t scale(uint16_t period) {
 	return (15000 * ((uint32_t) period)) / 65535;
 }
 
-double average(double* arr, uint16_t length) {
-	double sum = 0.0;
+int32_t average(int32_t* arr, uint16_t length) {
+	int32_t sum = 0;
 	int divisor = length;
 	for (int i = 0; i < length; i++) {
-		if (arr[i] != -1.0) {
-			if (arr[i] == 0.0) divisor--;
+		if (arr[i] != -1) {
+			if (arr[i] == 0) divisor--;
 			sum += arr[i];
 		} else {
-			return -1.0;
+			return -1;
 		}
 	}
 	
@@ -277,9 +282,9 @@ double average(double* arr, uint16_t length) {
 
 #define AVG_LENGTH 10
 
-double average_right(double x) {
+int32_t average_right(int32_t x) {
 	static int i = 0;
-	static double sonars[AVG_LENGTH] = { 0.0 };
+	static int32_t sonars[AVG_LENGTH] = { 0 };
 	
 	sonars[i++] = x;
 	if (i == AVG_LENGTH) i = 0;
@@ -287,9 +292,9 @@ double average_right(double x) {
 	return average(sonars, AVG_LENGTH);
 }
 
-double average_front(double x) {
+int32_t average_front(int32_t x) {
 	static int i = 0;
-	static double sonars[AVG_LENGTH] = { 0.0 };
+	static int32_t sonars[AVG_LENGTH] = { 0 };
 	
 	sonars[i++] = x;
 	if (i == AVG_LENGTH) i = 0;
@@ -297,19 +302,19 @@ double average_front(double x) {
 	return average(sonars, AVG_LENGTH);
 }
 
-double pid_controller(double y, double r) {
-	static double e_old = 0.0;
-	static double E = 0.0;
+int32_t pid_controller(int32_t y, int32_t r) {
+	static int32_t e_old = 0;
+	static int32_t E = 0;
 	
-	double e = r - y;
-	double e_dot = (e - e_old) / DELTA_T;
+	int32_t e = r - y;
+	int32_t e_dot = (e - e_old) / DELTA_T;
 	
 	// if we are too far from wall, use K_PB1. Else use K_PB2
-	double k = e < 0 ? K_PB1 : K_PB2;
+	int32_t k = e < 0 ? K_PB1 : K_PB2;
 	
 	E = CLAMP(E + e, -1, 1);
 	
-	double u = k * e + K_IB * E + K_DB * e_dot;
+	int32_t u = (k * e + K_IB * E + K_DB * e_dot) / K_SCALE;
 	e_old = e;
 	
 	return u;
@@ -417,7 +422,7 @@ double calculateDistance(uint32_t x) {
 	return (340 * ns) * 400;
 }
 
-double sonar1_measure(void) {
+int32_t sonar1_measure(void) {
 	uint16_t rising;
 	TA2CTL &= ~0x0030;
 	
@@ -434,12 +439,12 @@ double sonar1_measure(void) {
 	}
 	
 	uint32_t ns = TA2CCR1 - rising - CALIBRATION;
-	double dist = calculateDistance(ns);
+//	double dist = calculateDistance(ns);
 	
-	return dist;
+	return ns;
 }
 
-double sonar2_measure(void) {
+int32_t sonar2_measure(void) {
 	uint16_t rising;
 	TA3CTL &= ~0x0030;
 	TA3CCTL0 = 0x4900;
@@ -455,28 +460,28 @@ double sonar2_measure(void) {
 	}
 	
 	uint32_t ns = TA3CCR0 - rising - CALIBRATION;
-	double dist = calculateDistance(ns);
+//	double dist = calculateDistance(ns);
 	
-	return dist;
+	return ns;
 }
 
 
 // ********* PRINTING METHODS ***************
-void print_sonars(double son1, double son2, int32_t vld, int32_t vrd) {
-	char str1[80];
-	char str2[80];
-	
-	sprintf(str1, "%f", son1);
-	sprintf(str2, "%f", son2);
-	str1[6] = '\0';
-	str2[6] = '\0';
+void print_sonars(int32_t son1, int32_t son2, int32_t vld, int32_t vrd) {
+//	char str1[80];
+//	char str2[80];
+//	
+//	sprintf(str1, "%f", son1);
+//	sprintf(str2, "%f", son2);
+//	str1[6] = '\0';
+//	str2[6] = '\0';
 	
 	Nokia5110_Clear();
 	Nokia5110_OutString("Son1: ");
-	Nokia5110_OutString(str1);
+	Nokia5110_OutUDec(son1);
 //	Nokia5110_OutString("            ");
 	Nokia5110_OutString("Son2: ");
-	Nokia5110_OutString(str2);
+	Nokia5110_OutUDec(son2);
 	Nokia5110_OutString("vld:   ");
 	Nokia5110_OutUDec(vld);
 	Nokia5110_OutString("vrd:   ");
